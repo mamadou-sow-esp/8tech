@@ -1,7 +1,10 @@
 import { ShieldCheck, Truck, Store } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 
 export default function Hero() {
+  const { user } = useAuth()
+
   return (
     <section style={{ backgroundColor: '#F7D94C' }}>
       <div className="max-w-7xl mx-auto px-4 md:px-6 py-16 md:py-24 grid md:grid-cols-2 gap-10 items-center">
@@ -11,14 +14,14 @@ export default function Hero() {
           </h1>
           <p className="mt-4 text-brand-900/70 text-base md:text-lg max-w-md">
             Smartphones, ordinateurs, accessoires, comparez des centaines de
-            vendeurs et achetez en toute sécurité.
+            vendeurs vérifiés et achetez en toute sécurité.
           </p>
           <div className="mt-8 flex flex-wrap gap-4">
             <Link to="/produits" className="bg-sky-brand hover:bg-sky-brand-dark text-white font-semibold px-6 py-3 rounded-lg transition-colors">
               Explorer les produits
             </Link>
-            <Link to="/vendre" className="border border-brand-900/30 text-brand-900 font-semibold px-6 py-3 rounded-lg hover:bg-brand-900/5 transition-colors">
-              Devenir vendeur
+            <Link to={user ? '/compte' : '/vendre'} className="border border-brand-900/30 text-brand-900 font-semibold px-6 py-3 rounded-lg hover:bg-brand-900/5 transition-colors">
+              {user ? 'Vendre un produit' : 'Devenir vendeur'}
             </Link>
           </div>
 
