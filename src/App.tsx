@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { HelmetProvider } from 'react-helmet-async'
 import { CartProvider } from './context/CartContext'
 import { AuthProvider } from './context/AuthContext'
 import Home from './pages/Home'
@@ -21,30 +22,32 @@ import NotFound from './pages/NotFound'
 
 export default function App() {
   return (
-    <AuthProvider>
-      <CartProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/produits" element={<Produits />} />
-            <Route path="/produit/:id" element={<ProduitDetail />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/panier" element={<Panier />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/commandes" element={<Commandes />} />
-            <Route path="/ventes" element={<Ventes />} />
-            <Route path="/vendre" element={<Vendre />} />
-            <Route path="/categorie/:nom" element={<Categorie />} />
-            <Route path="/categories" element={<Categories />} />
-            <Route path="/compte" element={<Compte />} />
-            <Route path="/parametres" element={<Parametres />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/faq" element={<FAQ />} />
-            <Route path="/aide-vendeur" element={<AideVendeur />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </CartProvider>
-    </AuthProvider>
+    <HelmetProvider>
+      <AuthProvider>
+        <CartProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/produits" element={<Produits />} />
+              <Route path="/produit/:id" element={<ProduitDetail />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/panier" element={<Panier />} />
+              <Route path="/checkout" element={<Checkout />} />
+              <Route path="/commandes" element={<Commandes />} />
+              <Route path="/ventes" element={<Ventes />} />
+              <Route path="/vendre" element={<Vendre />} />
+              <Route path="/categorie/:nom" element={<Categorie />} />
+              <Route path="/categories" element={<Categories />} />
+              <Route path="/compte" element={<Compte />} />
+              <Route path="/parametres" element={<Parametres />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/faq" element={<FAQ />} />
+              <Route path="/aide-vendeur" element={<AideVendeur />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </CartProvider>
+      </AuthProvider>
+    </HelmetProvider>
   )
 }

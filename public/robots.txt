@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /compte
+Disallow: /parametres
+Disallow: /panier
+Disallow: /checkout
+Disallow: /commandes
+Disallow: /ventes
+Disallow: /login
+
+Sitemap: https://8tech-mu.vercel.app/sitemap.xml

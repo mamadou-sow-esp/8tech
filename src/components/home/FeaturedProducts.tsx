@@ -15,7 +15,7 @@ export default function FeaturedProducts() {
         {loading ? (
           <p className="text-slate-500">Chargement...</p>
         ) : (
-          <div className="grid grid-cols-4 md:grid-cols-4 gap-3 md:gap-6">
+          <div className="grid grid-cols-3 md:grid-cols-4 gap-3 md:gap-6">
             {products.slice(0, 12).map((p) => (
               <Link key={p.id} to={`/produit/${p.id}`} className="bg-white rounded-xl border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
                 <div className="aspect-square bg-slate-100 flex items-center justify-center text-slate-400 text-xs overflow-hidden">
