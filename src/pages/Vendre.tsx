@@ -25,10 +25,12 @@ export default function Vendre() {
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-6">
               <Store className="w-7 h-7 text-blue" />
             </div>
-            <img src="/logo.png" alt="8tech" className="h-16 md:h-20 w-auto mx-auto" />
-            <p className="mt-2 font-display text-2xl md:text-3xl font-bold text-brand-900">
-              Vendez sur 8tech
-            </p>
+            <div className="flex items-center justify-center gap-3 flex-wrap">
+              <p className="font-display text-2xl md:text-3xl font-bold text-brand-900">
+                Vendez sur
+              </p>
+              <img src="/logo.png" alt="8tech" className="h-14 md:h-20 w-auto" />
+            </div>
             <p className="mt-4 text-slate-600 max-w-xl mx-auto">
               {user
                 ? 'Ajoutez vos produits et gérez votre boutique depuis votre espace vendeur.'
