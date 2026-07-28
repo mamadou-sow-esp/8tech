@@ -7,7 +7,7 @@ type Props = {
   type?: string
 }
 
-const SITE = 'https://8tech-mu.vercel.app' // remplace par ton domaine plus tard
+const SITE = 'https://8tech-sn.com'
 
 export default function Seo({ title, description, image, type = 'website' }: Props) {
   const fullTitle = `${title} | 8tech`

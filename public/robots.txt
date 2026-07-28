@@ -8,4 +8,4 @@ Disallow: /commandes
 Disallow: /ventes
 Disallow: /login
 
-Sitemap: https://8tech-mu.vercel.app/sitemap.xml
+Sitemap: https://8tech-sn.com/sitemap.xml
