@@ -41,7 +41,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
-      <Navbar />
+      <Navbar hideSearch />
       <main className="flex-1 flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-md bg-white border border-slate-100 rounded-2xl p-8 shadow-sm">
           <h1 className="font-display text-2xl font-bold text-brand-900 mb-6">
