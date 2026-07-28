@@ -7,6 +7,7 @@ export default function Parametres() {
   const { user, profile, refreshProfile } = useAuth()
   const [username, setUsername] = useState(profile?.username ?? '')
   const [shopName, setShopName] = useState(profile?.shop_name ?? '')
+  const [website, setWebsite] = useState(profile?.website ?? '')
   const [telephone, setTelephone] = useState(profile?.telephone ?? '')
   const [adresse, setAdresse] = useState(profile?.adresse ?? '')
   const [ville, setVille] = useState(profile?.ville ?? '')
@@ -26,6 +27,7 @@ export default function Parametres() {
       .update({
         username,
         shop_name: shopName || null,
+        website: website || null,
         telephone: telephone || null,
         adresse: adresse || null,
         ville: ville || null,
@@ -51,9 +53,8 @@ export default function Parametres() {
       )}
 
       <div className="max-w-md space-y-6">
-        {/* Infos compte */}
         <div className="space-y-4">
-          <h2 className="font-display font-bold text-brand-900 text-sm uppercase tracking-wide text-slate-500">Compte</h2>
+          <h2 className="font-display font-bold text-sm uppercase tracking-wide text-slate-500">Compte</h2>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Nom d'utilisateur</label>
             <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
@@ -65,12 +66,17 @@ export default function Parametres() {
             <input type="text" value={shopName} onChange={(e) => setShopName(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
           </div>
           <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Site web <span className="text-slate-400 font-normal">(optionnel)</span>
+            </label>
+            <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://ma-boutique.com" className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
+          </div>
+          <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
             <input type="email" defaultValue={user?.email} disabled className="w-full h-11 px-3 rounded-lg bg-slate-100 border border-slate-200 text-sm text-slate-500" />
           </div>
         </div>
 
-        {/* Coordonnées vendeur */}
         <div className="space-y-4">
           <h2 className="font-display font-bold text-sm uppercase tracking-wide text-slate-500">Coordonnées vendeur</h2>
           <p className="text-xs text-slate-400 -mt-2">Ces informations seront visibles par les acheteurs sur vos produits.</p>

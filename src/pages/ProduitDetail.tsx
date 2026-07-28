@@ -8,7 +8,7 @@ import { useProducts } from '../hooks/useProducts'
 import { useCart } from '../context/CartContext'
 import { supabase } from '../lib/supabaseClient'
 
-type Vendeur = { telephone: string | null; adresse: string | null; ville: string | null }
+type Vendeur = { telephone: string | null; adresse: string | null; ville: string | null; website: string | null }
 type Avis = { id: number; rating: number; comment: string | null; created_at: string }
 
 export default function ProduitDetail() {
@@ -25,7 +25,7 @@ export default function ProduitDetail() {
     if (!product?.owner_id) return
     supabase
       .from('profiles')
-      .select('telephone, adresse, ville')
+      .select('telephone, adresse, ville, website')
       .eq('id', product.owner_id)
       .single()
       .then(({ data }) => setVendeur(data as Vendeur | null))
@@ -126,8 +126,16 @@ export default function ProduitDetail() {
           <h1 className="font-display text-2xl md:text-3xl font-bold text-brand-900">{product.name}</h1>
 
           <div className="mt-3 flex items-center gap-4 text-sm text-slate-500">
-            <span className="flex items-center gap-1"><Store className="w-4 h-4" /> {product.seller}</span>
-            <span className="flex items-center gap-1 text-amber-600"><Star className="w-4 h-4 fill-amber-500 text-amber-500" /> {product.rating}</span>
+            {vendeur?.website ? (
+              <a href={vendeur.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sky-brand hover:underline">
+                <Store className="w-4 h-4" /> {product.seller}
+              </a>
+            ) : (
+              <span className="flex items-center gap-1"><Store className="w-4 h-4" /> {product.seller}</span>
+            )}
+            {product.rating > 0 && (
+              <span className="flex items-center gap-1 text-amber-600"><Star className="w-4 h-4 fill-amber-500 text-amber-500" /> {product.rating}</span>
+            )}
           </div>
 
           <p className="mt-6 font-display text-3xl font-bold text-brand-900">{formatPrice(product.price)}</p>

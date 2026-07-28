@@ -10,6 +10,7 @@ type Profile = {
   telephone: string | null
   adresse: string | null
   ville: string | null
+  website: string | null
 }
 
 type AuthContextType = {
@@ -17,7 +18,7 @@ type AuthContextType = {
   session: Session | null
   profile: Profile | null
   loading: boolean
-  signUp: (email: string, password: string, username: string, shopName: string) => Promise<{ error: string | null }>
+  signUp: (email: string, password: string, username: string, shopName: string, website: string) => Promise<{ error: string | null }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
@@ -54,16 +55,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  const signUp = async (email: string, password: string, username: string, shopName: string) => {
+  const signUp = async (email: string, password: string, username: string, shopName: string, website: string) => {
     const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) return { error: error.message }
 
-    // Crée le profil lié au nouvel utilisateur
     if (data.user) {
       const { error: profileError } = await supabase.from('profiles').insert({
         id: data.user.id,
         username,
         shop_name: shopName || null,
+        website: website || null,
       })
       if (profileError) return { error: profileError.message }
     }

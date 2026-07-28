@@ -10,6 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [username, setUsername] = useState('')
   const [shopName, setShopName] = useState('')
+  const [website, setWebsite] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const { signIn, signUp } = useAuth()
@@ -25,7 +26,7 @@ export default function Login() {
 
     setLoading(true)
     const { error } = isSignup
-      ? await signUp(email, password, username, shopName)
+      ? await signUp(email, password, username, shopName, website)
       : await signIn(email, password)
     setLoading(false)
 
@@ -58,33 +59,39 @@ export default function Login() {
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Nom d'utilisateur <span className="text-red-500">*</span>
                   </label>
-                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="ex: mamadou_s" className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600" />
+                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="ex: mamadou_s" className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Nom de la boutique <span className="text-slate-400 font-normal">(optionnel)</span>
                   </label>
-                  <input type="text" value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="ex: TechSénégal" className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600" />
+                  <input type="text" value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="ex: TechSénégal" className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
                   <p className="text-xs text-slate-400 mt-1">Si vide, votre nom d'utilisateur sera affiché sur vos produits.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Site web <span className="text-slate-400 font-normal">(optionnel)</span>
+                  </label>
+                  <input type="url" value={website} onChange={(e) => setWebsite(e.target.value)} placeholder="https://ma-boutique.com" className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
                 </div>
               </>
             )}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600" />
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Mot de passe</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600" />
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
             </div>
-            <button onClick={handleSubmit} disabled={loading} className="w-full bg-brand-700 hover:bg-brand-900 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-60">
+            <button onClick={handleSubmit} disabled={loading} className="w-full bg-sky-brand hover:bg-sky-brand-dark text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-60">
               {loading ? 'Chargement...' : isSignup ? "S'inscrire" : 'Se connecter'}
             </button>
           </div>
 
           <p className="mt-6 text-sm text-slate-500 text-center">
             {isSignup ? 'Déjà un compte ?' : 'Pas encore de compte ?'}{' '}
-            <button onClick={() => { setIsSignup(!isSignup); setError(null) }} className="text-brand-700 font-medium">
+            <button onClick={() => { setIsSignup(!isSignup); setError(null) }} className="text-sky-brand font-medium">
               {isSignup ? 'Se connecter' : "S'inscrire"}
             </button>
           </p>

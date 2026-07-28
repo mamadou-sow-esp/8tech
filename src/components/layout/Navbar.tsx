@@ -9,7 +9,9 @@ export default function Navbar() {
   const [query, setQuery] = useState('')
   const navigate = useNavigate()
   const { totalItems } = useCart()
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+
+  const nomAffiche = profile?.shop_name || profile?.username || user?.email?.split('@')[0] || 'Mon compte'
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,10 +38,10 @@ export default function Navbar() {
           </Link>
           {user ? (
             <Link to="/compte" className="flex items-center gap-2 text-sm font-medium text-brand-900 hover:text-sky-brand px-3 py-2">
-              <div className="w-7 h-7 rounded-full bg-sky-brand text-white flex items-center justify-center text-xs font-bold uppercase">
-                {user.email?.charAt(0)}
+              <div className="w-7 h-7 rounded-full bg-sky-brand text-white flex items-center justify-center text-xs font-bold uppercase shrink-0">
+                {nomAffiche.charAt(0)}
               </div>
-              Mon compte
+              <span className="max-w-[120px] truncate">{nomAffiche}</span>
             </Link>
           ) : (
             <Link to="/login" className="flex items-center gap-2 text-sm font-medium text-brand-900 hover:text-sky-brand px-3 py-2">
@@ -58,7 +60,6 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Bouton hamburger animé */}
         <button
           className="md:hidden ml-auto relative w-6 h-6 text-brand-900"
           onClick={() => setOpen(!open)}
@@ -69,7 +70,6 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Menu mobile animé */}
       <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${open ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
         <div className="px-4 pb-4 flex flex-col gap-1 border-t border-slate-100 pt-3">
           <form onSubmit={handleSearch} className="relative mb-2">
@@ -88,7 +88,10 @@ export default function Navbar() {
           </Link>
           {user ? (
             <Link to="/compte" onClick={() => setOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-brand-900 hover:bg-slate-50 transition-colors">
-              <User className="w-5 h-5 text-sky-brand" /> Mon compte
+              <div className="w-6 h-6 rounded-full bg-sky-brand text-white flex items-center justify-center text-xs font-bold uppercase shrink-0">
+                {nomAffiche.charAt(0)}
+              </div>
+              <span className="truncate">{nomAffiche}</span>
             </Link>
           ) : (
             <Link to="/login" onClick={() => setOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-brand-900 hover:bg-slate-50 transition-colors">
