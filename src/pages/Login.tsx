@@ -1,0 +1,99 @@
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import Navbar from '../components/layout/Navbar'
+import Footer from '../components/layout/Footer'
+import { useAuth } from '../context/AuthContext'
+
+export default function Login() {
+  const [isSignup, setIsSignup] = useState(false)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [username, setUsername] = useState('')
+  const [shopName, setShopName] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const { signIn, signUp } = useAuth()
+  const navigate = useNavigate()
+
+  const handleSubmit = async () => {
+    setError(null)
+
+    if (isSignup && !username) {
+      setError("Le nom d'utilisateur est obligatoire.")
+      return
+    }
+
+    setLoading(true)
+    const { error } = isSignup
+      ? await signUp(email, password, username, shopName)
+      : await signIn(email, password)
+    setLoading(false)
+
+    if (error) {
+      setError(error)
+    } else {
+      navigate('/compte')
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-white flex flex-col">
+      <Navbar />
+      <main className="flex-1 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md bg-white border border-slate-100 rounded-2xl p-8 shadow-sm">
+          <h1 className="font-display text-2xl font-bold text-brand-900 mb-6">
+            {isSignup ? 'Créer un compte' : 'Se connecter'}
+          </h1>
+
+          {error && (
+            <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {isSignup && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Nom d'utilisateur <span className="text-red-500">*</span>
+                  </label>
+                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="ex: mamadou_s" className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Nom de la boutique <span className="text-slate-400 font-normal">(optionnel)</span>
+                  </label>
+                  <input type="text" value={shopName} onChange={(e) => setShopName(e.target.value)} placeholder="ex: TechSénégal" className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600" />
+                  <p className="text-xs text-slate-400 mt-1">Si vide, votre nom d'utilisateur sera affiché sur vos produits.</p>
+                </div>
+              </>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Mot de passe</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600" />
+            </div>
+            <button onClick={handleSubmit} disabled={loading} className="w-full bg-brand-700 hover:bg-brand-900 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-60">
+              {loading ? 'Chargement...' : isSignup ? "S'inscrire" : 'Se connecter'}
+            </button>
+          </div>
+
+          <p className="mt-6 text-sm text-slate-500 text-center">
+            {isSignup ? 'Déjà un compte ?' : 'Pas encore de compte ?'}{' '}
+            <button onClick={() => { setIsSignup(!isSignup); setError(null) }} className="text-brand-700 font-medium">
+              {isSignup ? 'Se connecter' : "S'inscrire"}
+            </button>
+          </p>
+          <p className="mt-2 text-xs text-slate-400 text-center">
+            <Link to="/">Retour à l'accueil</Link>
+          </p>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  )
+}
