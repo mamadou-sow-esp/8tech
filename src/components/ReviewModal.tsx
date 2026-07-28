@@ -14,13 +14,11 @@ type Props = {
 
 export default function ReviewModal({ orderId, items, onClose, onDone }: Props) {
   const { user } = useAuth()
-  // Une note + commentaire par produit
   const [ratings, setRatings] = useState<Record<number, number>>({})
   const [comments, setComments] = useState<Record<number, string>>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // On ne garde que les produits ayant un id (les vrais produits)
   const produits = items.filter((i) => i.id != null)
 
   const setRating = (pid: number, val: number) => setRatings({ ...ratings, [pid]: val })
@@ -28,7 +26,6 @@ export default function ReviewModal({ orderId, items, onClose, onDone }: Props) 
 
   const handleSubmit = async () => {
     if (!user) return
-    // Vérifie qu'au moins chaque produit a une note
     for (const p of produits) {
       if (!ratings[p.id!]) {
         setError('Merci de noter chaque produit.')
@@ -38,7 +35,7 @@ export default function ReviewModal({ orderId, items, onClose, onDone }: Props) 
     setLoading(true)
     setError(null)
 
-    // Insère un avis par produit + recalcule la note
+    // Insère les avis + recalcule les notes
     for (const p of produits) {
       const pid = p.id!
       const { error: insErr } = await supabase.from('reviews').insert({
@@ -50,16 +47,26 @@ export default function ReviewModal({ orderId, items, onClose, onDone }: Props) 
       })
       if (insErr) {
         setLoading(false)
-        setError(insErr.message)
+        setError('Erreur avis : ' + insErr.message)
         return
       }
       await supabase.rpc('recalculer_note', { pid })
     }
 
     // Marque la commande comme reçue + notée
-    await supabase.from('orders').update({ status: 'reçu', reviewed: true }).eq('id', orderId)
+    const { error: updErr } = await supabase
+      .from('orders')
+      .update({ status: 'reçu', reviewed: true })
+      .eq('id', orderId)
+      .select()
 
     setLoading(false)
+
+    if (updErr) {
+      setError('Erreur commande : ' + updErr.message)
+      return
+    }
+
     onDone()
     onClose()
   }
