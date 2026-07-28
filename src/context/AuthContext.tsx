@@ -56,19 +56,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signUp = async (email: string, password: string, username: string, shopName: string, website: string) => {
-    const { data, error } = await supabase.auth.signUp({ email, password })
-    if (error) return { error: error.message }
-
-    if (data.user) {
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        username,
-        shop_name: shopName || null,
-        website: website || null,
-      })
-      if (profileError) return { error: profileError.message }
-    }
-    return { error: null }
+    // On passe les infos en metadata : le trigger SQL créera le profil
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username,
+          shop_name: shopName || null,
+          website: website || null,
+        },
+      },
+    })
+    return { error: error?.message ?? null }
   }
 
   const signIn = async (email: string, password: string) => {
