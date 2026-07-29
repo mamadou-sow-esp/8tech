@@ -27,7 +27,7 @@ export default function Compte() {
     <CompteLayout>
       <div className="flex items-center justify-between mb-6">
         <h1 className="font-display text-2xl font-bold text-brand-900">Mes produits</h1>
-        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-brand-900 font-semibold px-4 py-2 rounded-lg text-sm transition-colors">
+        <button onClick={() => setShowForm(true)} className="flex items-center gap-2 bg-yellow-300 hover:bg-sky-brand text-brand-900 font-semibold px-4 py-2 rounded-lg text-sm transition-colors">
           <Plus className="w-4 h-4" /> Ajouter
         </button>
       </div>
