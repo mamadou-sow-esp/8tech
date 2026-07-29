@@ -22,6 +22,9 @@ export default async function handler(req, res) {
     { loc: '/vendre', priority: '0.7' },
     { loc: '/contact', priority: '0.5' },
     { loc: '/faq', priority: '0.5' },
+    { loc: '/mentions-legales', priority: '0.3' },
+    { loc: '/confidentialite', priority: '0.3' },
+    { loc: '/cgu', priority: '0.3' },
   ]
 
   const urlsFixes = pagesFixes

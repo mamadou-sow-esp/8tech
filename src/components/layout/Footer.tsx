@@ -30,8 +30,16 @@ export default function Footer() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-brand-900/10 py-4 text-center text-xs text-brand-900/60">
-        © 2026 8tech. Tous droits réservés.
+
+      <div className="border-t border-brand-900/10">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 flex flex-col md:flex-row items-center justify-between gap-3 text-xs text-brand-900/60">
+          <p>© 2026 8tech. Tous droits réservés.</p>
+          <div className="flex flex-wrap gap-4">
+            <Link to="/mentions-legales" className="hover:text-brand-900">Mentions légales</Link>
+            <Link to="/confidentialite" className="hover:text-brand-900">Confidentialité</Link>
+            <Link to="/cgu" className="hover:text-brand-900">CGU / CGV</Link>
+          </div>
+        </div>
       </div>
     </footer>
   )
