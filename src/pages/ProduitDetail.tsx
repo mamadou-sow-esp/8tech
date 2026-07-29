@@ -145,7 +145,7 @@ export default function ProduitDetail() {
           <div className="mt-3">
             {enStock ? (
               <span className="inline-flex items-center gap-1 text-sm text-green-600 font-medium">
-                <Package className="w-4 h-4" /> En stock {product.stock} disponible{(product.stock ?? 0) > 1 ? 's' : ''}
+                <Package className="w-4 h-4" /> En stock : {product.stock} disponible{(product.stock ?? 0) > 1 ? 's' : ''}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-sm text-red-500 font-medium">

@@ -17,7 +17,7 @@ export default function Contact() {
           </div>
           <div className="flex items-center gap-3 p-4 rounded-xl border border-slate-100">
             <Phone className="w-5 h-5 text-brand-700" />
-            <span className="text-slate-700">+221 77 000 00 00</span>
+            <span className="text-slate-700">+221 77 084 79 15</span>
           </div>
           <div className="flex items-center gap-3 p-4 rounded-xl border border-slate-100">
             <MapPin className="w-5 h-5 text-brand-700" />
