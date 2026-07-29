@@ -6,6 +6,7 @@ import Footer from '../components/layout/Footer'
 import { formatPrice } from '../data/products'
 import { useProducts } from '../hooks/useProducts'
 import { useCart } from '../context/CartContext'
+import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 
 type Vendeur = { telephone: string | null; adresse: string | null; ville: string | null; website: string | null }
@@ -15,6 +16,7 @@ export default function ProduitDetail() {
   const { id } = useParams()
   const { products, loading } = useProducts()
   const { addItem } = useCart()
+  const { user } = useAuth()
   const [added, setAdded] = useState(false)
   const [vendeur, setVendeur] = useState<Vendeur | null>(null)
   const [imgIndex, setImgIndex] = useState(0)
@@ -69,9 +71,11 @@ export default function ProduitDetail() {
     : product.image_url ? [product.image_url] : []
 
   const enStock = (product.stock ?? 0) > 0
+  const estMonProduit = user?.id === product.owner_id
+  const avisAvecCommentaire = avis.filter((a) => a.comment && a.comment.trim())
 
   const handleAdd = () => {
-    if (!enStock) return
+    if (!enStock || estMonProduit) return
     addItem(product)
     setAdded(true)
     setTimeout(() => setAdded(false), 1500)
@@ -84,7 +88,6 @@ export default function ProduitDetail() {
     <div className="min-h-screen bg-white flex flex-col">
       <Navbar />
       <main className="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-8 w-full grid md:grid-cols-2 gap-10">
-        {/* Carrousel */}
         <div>
           <div className="relative aspect-square bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center text-slate-400">
             {galerie.length > 0 ? (
@@ -121,15 +124,14 @@ export default function ProduitDetail() {
           )}
         </div>
 
-        {/* Infos */}
         <div>
           <h1 className="font-display text-2xl md:text-3xl font-bold text-brand-900">{product.name}</h1>
 
           <div className="mt-3 flex items-center gap-4 text-sm text-slate-500">
-            {vendeur?.website ? (
-              <a href={vendeur.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-sky-brand hover:underline">
+            {product.owner_id ? (
+              <Link to={`/boutique/${product.owner_id}`} className="flex items-center gap-1 text-sky-brand hover:underline">
                 <Store className="w-4 h-4" /> {product.seller}
-              </a>
+              </Link>
             ) : (
               <span className="flex items-center gap-1"><Store className="w-4 h-4" /> {product.seller}</span>
             )}
@@ -143,7 +145,7 @@ export default function ProduitDetail() {
           <div className="mt-3">
             {enStock ? (
               <span className="inline-flex items-center gap-1 text-sm text-green-600 font-medium">
-                <Package className="w-4 h-4" /> En stock {product.stock} disponible{(product.stock ?? 0) > 1 ? 's' : ''}
+                <Package className="w-4 h-4" /> En stock — {product.stock} disponible{(product.stock ?? 0) > 1 ? 's' : ''}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-sm text-red-500 font-medium">
@@ -152,7 +154,6 @@ export default function ProduitDetail() {
             )}
           </div>
 
-          {/* État du produit */}
           {product.condition && (
             <div className="mt-4">
               <span className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1 rounded-full ${
@@ -165,9 +166,15 @@ export default function ProduitDetail() {
             </div>
           )}
 
-          <button onClick={handleAdd} disabled={!enStock} className={`mt-6 w-full md:w-auto flex items-center justify-center gap-2 font-semibold px-8 py-3 rounded-lg transition-colors ${!enStock ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : added ? 'bg-green-500 text-white' : 'bg-sky-brand hover:bg-sky-brand-dark text-white'}`}>
-            {added ? (<><Check className="w-5 h-5" /> Ajouté !</>) : (<><ShoppingCart className="w-5 h-5" /> {enStock ? 'Ajouter au panier' : 'Indisponible'}</>)}
-          </button>
+          {estMonProduit ? (
+            <p className="mt-6 text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-4 py-3">
+              Ceci est votre produit. Vous ne pouvez pas l'acheter.
+            </p>
+          ) : (
+            <button onClick={handleAdd} disabled={!enStock} className={`mt-6 w-full md:w-auto flex items-center justify-center gap-2 font-semibold px-8 py-3 rounded-lg transition-colors ${!enStock ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : added ? 'bg-green-500 text-white' : 'bg-sky-brand hover:bg-sky-brand-dark text-white'}`}>
+              {added ? (<><Check className="w-5 h-5" /> Ajouté !</>) : (<><ShoppingCart className="w-5 h-5" /> {enStock ? 'Ajouter au panier' : 'Indisponible'}</>)}
+            </button>
+          )}
 
           {product.description && (
             <div className="mt-8">
@@ -200,24 +207,29 @@ export default function ProduitDetail() {
             <p className="flex items-center gap-2"><Truck className="w-4 h-4 text-sky-brand" /> Livraison suivie partout au Sénégal</p>
           </div>
 
-          {avis.length > 0 && (
+          {avisAvecCommentaire.length > 0 && (
             <div className="mt-8">
               <h2 className="font-display font-bold text-brand-900 mb-3 flex items-center gap-2">
-                <MessageSquare className="w-4 h-4" /> Avis clients ({avis.length})
+                <MessageSquare className="w-4 h-4" /> Avis clients
               </h2>
               <div className="space-y-3">
-                {avis.map((a) => (
+                {avisAvecCommentaire.slice(0, 3).map((a) => (
                   <div key={a.id} className="border border-slate-100 rounded-lg p-3">
                     <div className="flex gap-0.5 mb-1">
                       {[1, 2, 3, 4, 5].map((n) => (
                         <Star key={n} className={`w-4 h-4 ${n <= a.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
                       ))}
                     </div>
-                    {a.comment && <p className="text-sm text-slate-600">{a.comment}</p>}
+                    <p className="text-sm text-slate-600">{a.comment}</p>
                     <p className="text-xs text-slate-400 mt-1">{new Date(a.created_at).toLocaleDateString('fr-FR')}</p>
                   </div>
                 ))}
               </div>
+              {avisAvecCommentaire.length > 3 && (
+                <Link to={`/produit/${product.id}/avis`} className="inline-block mt-3 text-sm text-sky-brand font-medium hover:underline">
+                  Voir tous les avis ({avisAvecCommentaire.length})
+                </Link>
+              )}
             </div>
           )}
         </div>

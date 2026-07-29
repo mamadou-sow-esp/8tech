@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Package, Settings, LogOut, ShoppingBag, TrendingUp } from 'lucide-react'
+import { LayoutDashboard, Package, Settings, LogOut, ShoppingBag, TrendingUp } from 'lucide-react'
 import type { ReactNode } from 'react'
 import Navbar from './Navbar'
 import Footer from './Footer'
@@ -43,8 +43,12 @@ export default function CompteLayout({ children }: { children: ReactNode }) {
       <main className="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-8 w-full grid md:grid-cols-4 gap-8">
         <aside className="md:col-span-1">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-full bg-sky-brand text-white flex items-center justify-center font-bold uppercase">
-              {nomAffiche.charAt(0)}
+            <div className="w-12 h-12 rounded-full overflow-hidden bg-sky-brand text-white flex items-center justify-center font-bold uppercase shrink-0">
+              {profile?.avatar_url ? (
+                <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                nomAffiche.charAt(0)
+              )}
             </div>
             <div className="min-w-0">
               <p className="font-semibold text-brand-900 text-sm truncate">{nomAffiche}</p>
@@ -52,6 +56,9 @@ export default function CompteLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
           <nav className="space-y-1">
+            <button onClick={() => navigate('/dashboard')} className={linkClass('/dashboard')}>
+              <LayoutDashboard className="w-4 h-4" /> Tableau de bord
+            </button>
             <button onClick={() => navigate('/compte')} className={linkClass('/compte')}>
               <Package className="w-4 h-4" /> Mes produits
             </button>

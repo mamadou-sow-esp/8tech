@@ -11,6 +11,7 @@ type Profile = {
   adresse: string | null
   ville: string | null
   website: string | null
+  avatar_url: string | null
 }
 
 type AuthContextType = {
@@ -56,7 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signUp = async (email: string, password: string, username: string, shopName: string, website: string) => {
-    // On passe les infos en metadata : le trigger SQL créera le profil
     const { error } = await supabase.auth.signUp({
       email,
       password,

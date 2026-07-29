@@ -41,8 +41,16 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
   }
 
   const handleSubmit = async () => {
-    if (!name || !price) {
+    if (!name.trim() || !price) {
       setError('Le nom et le prix sont obligatoires.')
+      return
+    }
+    if (Number(price) < 0) {
+      setError('Le prix ne peut pas être négatif.')
+      return
+    }
+    if (Number(stock) < 0) {
+      setError('Le stock ne peut pas être négatif.')
       return
     }
     if (!user) {

@@ -21,6 +21,9 @@ import AideVendeur from './pages/AideVendeur'
 import NotFound from './pages/NotFound'
 import MotDePasseOublie from './pages/MotDePasseOublie'
 import ReinitialiserMotDePasse from './pages/ReinitialiserMotDePasse'
+import AvisProduit from './pages/AvisProduit'
+import Boutique from './pages/Boutique'
+import Dashboard from './pages/Dashboard'
 
 export default function App() {
   return (
@@ -33,6 +36,7 @@ export default function App() {
               <Route path="/produits" element={<Produits />} />
               <Route path="/produit/:id" element={<ProduitDetail />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/panier" element={<Panier />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/commandes" element={<Commandes />} />
@@ -41,10 +45,12 @@ export default function App() {
               <Route path="/categorie/:nom" element={<Categorie />} />
               <Route path="/categories" element={<Categories />} />
               <Route path="/compte" element={<Compte />} />
+              <Route path="/boutique/:ownerId" element={<Boutique />} />
               <Route path="/parametres" element={<Parametres />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/aide-vendeur" element={<AideVendeur />} />
+              <Route path="/produit/:id/avis" element={<AvisProduit />} />
               <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
               <Route path="/reinitialiser-mot-de-passe" element={<ReinitialiserMotDePasse />} />
               <Route path="*" element={<NotFound />} />

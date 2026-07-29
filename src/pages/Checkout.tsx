@@ -32,40 +32,74 @@ export default function Checkout() {
     setLoading(true)
     setError(null)
 
-    const sellerId = items[0]?.owner_id ?? null
+    // 1. Vérifie le stock réel en base
+    const ids = items.map((i) => i.id)
+    const { data: stockData, error: stockErr } = await supabase
+      .from('products')
+      .select('id, name, stock')
+      .in('id', ids)
 
-    const { data: orderData, error } = await supabase
-      .from('orders')
-      .insert({
-        user_id: user.id,
-        seller_id: sellerId,
-        items: items,
-        total: totalPrice,
-        nom,
-        telephone,
-        adresse,
-        ville,
-      })
-      .select()
-      .single()
-
-    if (error) {
+    if (stockErr) {
       setLoading(false)
-      setError(error.message)
+      setError('Erreur de vérification du stock.')
       return
     }
 
-    // Décrémente le stock de chaque produit commandé
     for (const item of items) {
-      await supabase.rpc('decrementer_stock', {
-        produit_id: item.id,
-        quantite: item.qty,
-      })
+      const produit = stockData?.find((p) => p.id === item.id)
+      const dispo = produit?.stock ?? 0
+      if (item.qty > dispo) {
+        setLoading(false)
+        setError(`Stock insuffisant pour "${item.name}" : ${dispo} disponible(s), vous en demandez ${item.qty}.`)
+        return
+      }
     }
 
-    // Notifie le vendeur par email
-    if (sellerId && orderData) {
-      await emailNouvelleCommande(sellerId, orderData.id, formatPrice(totalPrice), nom)
+    // 2. Regroupe les articles par vendeur (owner_id)
+    const parVendeur: Record<string, typeof items> = {}
+    for (const item of items) {
+      const key = item.owner_id ?? 'inconnu'
+      if (!parVendeur[key]) parVendeur[key] = []
+      parVendeur[key].push(item)
+    }
+
+    // 3. Crée une commande par vendeur
+    for (const [sellerId, vendeurItems] of Object.entries(parVendeur)) {
+      const sousTotal = vendeurItems.reduce((sum, i) => sum + i.price * i.qty, 0)
+
+      const { data: orderData, error } = await supabase
+        .from('orders')
+        .insert({
+          user_id: user.id,
+          seller_id: sellerId === 'inconnu' ? null : sellerId,
+          items: vendeurItems,
+          total: sousTotal,
+          nom,
+          telephone,
+          adresse,
+          ville,
+        })
+        .select()
+        .single()
+
+      if (error) {
+        setLoading(false)
+        setError(error.message)
+        return
+      }
+
+      // Décrémente le stock des articles de ce vendeur
+      for (const item of vendeurItems) {
+        await supabase.rpc('decrementer_stock', {
+          produit_id: item.id,
+          quantite: item.qty,
+        })
+      }
+
+      // Notifie ce vendeur
+      if (sellerId !== 'inconnu' && orderData) {
+        await emailNouvelleCommande(sellerId, orderData.id, formatPrice(sousTotal), nom)
+      }
     }
 
     setLoading(false)

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Camera } from 'lucide-react'
 import CompteLayout from '../components/layout/CompteLayout'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
@@ -11,8 +12,40 @@ export default function Parametres() {
   const [telephone, setTelephone] = useState(profile?.telephone ?? '')
   const [adresse, setAdresse] = useState(profile?.adresse ?? '')
   const [ville, setVille] = useState(profile?.ville ?? '')
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url ?? '')
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+
+  const nomAffiche = shopName || username || 'B'
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !user) return
+
+    setUploadingAvatar(true)
+    setMessage(null)
+
+    const ext = file.name.split('.').pop()
+    const fileName = `${user.id}/avatar-${Date.now()}.${ext}`
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true })
+
+    if (uploadError) {
+      setUploadingAvatar(false)
+      setMessage('Erreur upload : ' + uploadError.message)
+      return
+    }
+
+    const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
+    const newUrl = data.publicUrl
+
+    // Sauvegarde immédiate de l'avatar
+    await supabase.from('profiles').update({ avatar_url: newUrl }).eq('id', user.id)
+    setAvatarUrl(newUrl)
+    await refreshProfile()
+    setUploadingAvatar(false)
+    setMessage('Photo de profil mise à jour.')
+  }
 
   const handleSave = async () => {
     if (!user) return
@@ -53,6 +86,28 @@ export default function Parametres() {
       )}
 
       <div className="max-w-md space-y-6">
+        {/* Photo de profil */}
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <div className="w-20 h-20 rounded-full overflow-hidden bg-sky-brand text-white flex items-center justify-center font-bold text-2xl uppercase">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                nomAffiche.charAt(0)
+              )}
+            </div>
+            <label className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-50 shadow-sm">
+              <Camera className="w-4 h-4 text-slate-600" />
+              <input type="file" accept="image/*" onChange={handleAvatarUpload} className="hidden" />
+            </label>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-700">Photo de profil</p>
+            <p className="text-xs text-slate-400">{uploadingAvatar ? 'Envoi en cours...' : 'Cliquez sur l\'icône pour changer'}</p>
+          </div>
+        </div>
+
+        {/* Compte */}
         <div className="space-y-4">
           <h2 className="font-display font-bold text-sm uppercase tracking-wide text-slate-500">Compte</h2>
           <div>
@@ -77,6 +132,7 @@ export default function Parametres() {
           </div>
         </div>
 
+        {/* Coordonnées vendeur */}
         <div className="space-y-4">
           <h2 className="font-display font-bold text-sm uppercase tracking-wide text-slate-500">Coordonnées vendeur</h2>
           <p className="text-xs text-slate-400 -mt-2">Ces informations seront visibles par les acheteurs sur vos produits.</p>
