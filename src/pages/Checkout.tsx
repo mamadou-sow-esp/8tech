@@ -149,7 +149,7 @@ export default function Checkout() {
               <input type="text" value={ville} onChange={(e) => setVille(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
             </div>
             <p className="text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-3">
-              💵 Paiement en espèces à la livraison. Le règlement se fait directement avec le vendeur.
+               Paiement en espèces à la livraison. Le règlement se fait directement avec le vendeur.
             </p>
           </div>
         </div>

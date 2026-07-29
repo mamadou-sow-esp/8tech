@@ -10,7 +10,7 @@ export default function NotFound() {
         <p className="font-display text-6xl font-bold text-brand-900">404</p>
         <p className="mt-4 text-slate-600">Cette page n'existe pas.</p>
         <Link to="/" className="mt-6 bg-brand-700 hover:bg-brand-900 text-white font-semibold px-6 py-3 rounded-lg transition-colors">
-          Retour à l'accueil
+          Retour à l'accueil.
         </Link>
       </main>
       <Footer />
