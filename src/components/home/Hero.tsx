@@ -7,7 +7,7 @@ export default function Hero() {
 
   return (
     <section style={{ backgroundColor: '#F7D94C' }}>
-      <div className="max-w-7xl mx-auto px-4 md:px-6 py-16 md:py-24 grid md:grid-cols-2 gap-10 items-center">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-14 grid md:grid-cols-2 gap-10 items-center">
         <div>
           <h1 className="font-display text-3xl md:text-5xl font-bold text-brand-900 leading-tight">
             Le tech, direct des vendeurs de confiance
@@ -27,13 +27,13 @@ export default function Hero() {
 
           <div className="mt-10 flex flex-wrap gap-6 text-brand-900/80 text-sm">
             <span className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-brand-900" /> Paiement sécurisé
+              <ShieldCheck className="w-4 h-4 text-brand-900" /> Vendeurs vérifiés
             </span>
             <span className="flex items-center gap-2">
               <Truck className="w-4 h-4 text-brand-900" /> Livraison suivie
             </span>
             <span className="flex items-center gap-2">
-              <Store className="w-4 h-4 text-brand-900" /> +500 vendeurs
+              <Store className="w-4 h-4 text-brand-900" /> Paiement à la livraison
             </span>
           </div>
         </div>

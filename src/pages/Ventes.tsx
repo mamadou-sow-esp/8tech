@@ -4,6 +4,7 @@ import CompteLayout from '../components/layout/CompteLayout'
 import { formatPrice } from '../data/products'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
+import { emailStatutCommande } from '../lib/sendEmail'
 
 type OrderItem = { name: string; qty: number; price: number }
 type Order = {
@@ -16,6 +17,7 @@ type Order = {
   telephone: string
   adresse: string
   ville: string
+  user_id: string
 }
 
 const etapes = ['en attente', 'confirmé', 'expédié', 'livré']
@@ -42,8 +44,9 @@ export default function Ventes() {
     fetchOrders()
   }, [user, authLoading])
 
-  const updateStatus = async (orderId: number, newStatus: string) => {
+  const updateStatus = async (orderId: number, newStatus: string, clientId: string) => {
     await supabase.from('orders').update({ status: newStatus }).eq('id', orderId)
+    await emailStatutCommande(clientId, orderId, newStatus)
     fetchOrders()
   }
 
@@ -72,7 +75,6 @@ export default function Ventes() {
                 </span>
               </div>
 
-              {/* Infos client */}
               <div className="text-sm text-slate-600 bg-slate-50 rounded-lg p-3 mb-3">
                 <p className="font-medium text-brand-900">{order.nom}</p>
                 <p>{order.telephone}</p>
@@ -93,14 +95,13 @@ export default function Ventes() {
                 <span>{formatPrice(order.total)}</span>
               </div>
 
-              {/* Changement de statut */}
               <div>
                 <label className="block text-xs font-medium text-slate-500 mb-1">Mettre à jour le statut</label>
                 <div className="flex flex-wrap gap-2">
                   {etapes.map((etape) => (
                     <button
                       key={etape}
-                      onClick={() => updateStatus(order.id, etape)}
+                      onClick={() => updateStatus(order.id, etape, order.user_id)}
                       className={`text-xs px-3 py-1.5 rounded-lg capitalize font-medium transition-colors ${order.status === etape ? 'bg-sky-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                     >
                       {etape}

@@ -152,6 +152,19 @@ export default function ProduitDetail() {
             )}
           </div>
 
+          {/* État du produit */}
+          {product.condition && (
+            <div className="mt-4">
+              <span className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1 rounded-full ${
+                product.condition === 'Neuf' ? 'bg-green-50 text-green-700'
+                : product.condition === 'Venant' ? 'bg-sky-brand/10 text-sky-brand'
+                : 'bg-amber-50 text-amber-700'
+              }`}>
+                État : {product.condition}
+              </span>
+            </div>
+          )}
+
           <button onClick={handleAdd} disabled={!enStock} className={`mt-6 w-full md:w-auto flex items-center justify-center gap-2 font-semibold px-8 py-3 rounded-lg transition-colors ${!enStock ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : added ? 'bg-green-500 text-white' : 'bg-sky-brand hover:bg-sky-brand-dark text-white'}`}>
             {added ? (<><Check className="w-5 h-5" /> Ajouté !</>) : (<><ShoppingCart className="w-5 h-5" /> {enStock ? 'Ajouter au panier' : 'Indisponible'}</>)}
           </button>

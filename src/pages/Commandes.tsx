@@ -16,12 +16,12 @@ type Order = {
   items: OrderItem[]
   ville: string
   reviewed: boolean
+  seller_id: string | null
 }
 
 const etapes = ['en attente', 'confirmé', 'expédié', 'livré']
 
 function SuiviBarre({ status }: { status: string }) {
-  // 'reçu' compte comme livré pour la barre
   const effectif = status === 'reçu' ? 'livré' : status
   const indexActuel = etapes.indexOf(effectif)
   return (
@@ -104,7 +104,6 @@ export default function Commandes() {
                 <span>{formatPrice(order.total)}</span>
               </div>
 
-              {/* Bouton confirmer réception : visible si livré et pas encore noté */}
               {order.status === 'livré' && !order.reviewed && (
                 <button onClick={() => setReviewOrder(order)} className="w-full mt-4 bg-sky-brand hover:bg-sky-brand-dark text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
                   Confirmer la réception
@@ -124,6 +123,7 @@ export default function Commandes() {
         <ReviewModal
           orderId={reviewOrder.id}
           items={reviewOrder.items}
+          sellerId={reviewOrder.seller_id}
           onClose={() => setReviewOrder(null)}
           onDone={() => user && fetchOrders(user.id)}
         />

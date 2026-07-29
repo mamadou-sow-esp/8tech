@@ -6,6 +6,7 @@ import { formatPrice } from '../data/products'
 import { useCart } from '../context/CartContext'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
+import { emailNouvelleCommande } from '../lib/sendEmail'
 
 export default function Checkout() {
   const { items, totalPrice, clear } = useCart()
@@ -31,27 +32,45 @@ export default function Checkout() {
     setLoading(true)
     setError(null)
 
-    // On récupère le vendeur du premier article (simplifié : 1 vendeur par commande)
     const sellerId = items[0]?.owner_id ?? null
 
-    const { error } = await supabase.from('orders').insert({
-      user_id: user.id,
-      seller_id: sellerId,
-      items: items,
-      total: totalPrice,
-      nom,
-      telephone,
-      adresse,
-      ville,
-    })
+    const { data: orderData, error } = await supabase
+      .from('orders')
+      .insert({
+        user_id: user.id,
+        seller_id: sellerId,
+        items: items,
+        total: totalPrice,
+        nom,
+        telephone,
+        adresse,
+        ville,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      setLoading(false)
+      setError(error.message)
+      return
+    }
+
+    // Décrémente le stock de chaque produit commandé
+    for (const item of items) {
+      await supabase.rpc('decrementer_stock', {
+        produit_id: item.id,
+        quantite: item.qty,
+      })
+    }
+
+    // Notifie le vendeur par email
+    if (sellerId && orderData) {
+      await emailNouvelleCommande(sellerId, orderData.id, formatPrice(totalPrice), nom)
+    }
 
     setLoading(false)
-    if (error) {
-      setError(error.message)
-    } else {
-      clear()
-      navigate('/commandes')
-    }
+    clear()
+    navigate('/commandes')
   }
 
   if (items.length === 0) {

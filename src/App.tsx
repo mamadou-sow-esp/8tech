@@ -19,6 +19,8 @@ import Contact from './pages/Contact'
 import FAQ from './pages/FAQ'
 import AideVendeur from './pages/AideVendeur'
 import NotFound from './pages/NotFound'
+import MotDePasseOublie from './pages/MotDePasseOublie'
+import ReinitialiserMotDePasse from './pages/ReinitialiserMotDePasse'
 
 export default function App() {
   return (
@@ -43,6 +45,8 @@ export default function App() {
               <Route path="/contact" element={<Contact />} />
               <Route path="/faq" element={<FAQ />} />
               <Route path="/aide-vendeur" element={<AideVendeur />} />
+              <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+              <Route path="/reinitialiser-mot-de-passe" element={<ReinitialiserMotDePasse />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

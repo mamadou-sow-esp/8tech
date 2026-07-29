@@ -17,6 +17,7 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
   const [name, setName] = useState(product?.name ?? '')
   const [price, setPrice] = useState(product ? String(product.price) : '')
   const [category, setCategory] = useState(product?.category ?? 'Smartphones')
+  const [condition, setCondition] = useState(product?.condition ?? 'Neuf')
   const [description, setDescription] = useState(product?.description ?? '')
   const [stock, setStock] = useState(product ? String(product.stock ?? 0) : '')
 
@@ -51,7 +52,6 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
     setLoading(true)
     setError(null)
 
-    // 1. Upload des fichiers choisis vers Storage
     const uploadedUrls: string[] = []
     for (const file of files) {
       const ext = file.name.split('.').pop()
@@ -68,21 +68,19 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
       uploadedUrls.push(data.publicUrl)
     }
 
-    // 2. Toutes les images réunies
     const allImages = [...existingImages, ...uploadedUrls, ...urls]
 
-    // 3. Construction du payload
     const payload: Record<string, unknown> = {
       name,
       price: Number(price),
       category,
+      condition,
       description: description || null,
       stock: Number(stock) || 0,
       images: allImages,
       image_url: allImages[0] ?? null,
     }
 
-    // 4. Insert ou update
     let result
     if (isEdit) {
       result = await supabase.from('products').update(payload).eq('id', product!.id).select()
@@ -142,16 +140,26 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Catégorie</label>
-            <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand">
-              <option>Smartphones</option>
-              <option>Ordinateurs</option>
-              <option>Audio</option>
-              <option>Montres connectées</option>
-              <option>Photo & vidéo</option>
-              <option>Gaming</option>
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Catégorie</label>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand">
+                <option>Smartphones</option>
+                <option>Ordinateurs</option>
+                <option>Audio</option>
+                <option>Montres connectées</option>
+                <option>Photo & vidéo</option>
+                <option>Gaming</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">État</label>
+              <select value={condition} onChange={(e) => setCondition(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand">
+                <option>Neuf</option>
+                <option>Venant</option>
+                <option>Occasion</option>
+              </select>
+            </div>
           </div>
 
           <div>

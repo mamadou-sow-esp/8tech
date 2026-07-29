@@ -2,17 +2,19 @@ import { useState } from 'react'
 import { X, Star } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
+import { emailReceptionConfirmee } from '../lib/sendEmail'
 
 type OrderItem = { id?: number; name: string; qty: number; price: number }
 
 type Props = {
   orderId: number
   items: OrderItem[]
+  sellerId?: string | null
   onClose: () => void
   onDone: () => void
 }
 
-export default function ReviewModal({ orderId, items, onClose, onDone }: Props) {
+export default function ReviewModal({ orderId, items, sellerId, onClose, onDone }: Props) {
   const { user } = useAuth()
   const [ratings, setRatings] = useState<Record<number, number>>({})
   const [comments, setComments] = useState<Record<number, string>>({})
@@ -35,7 +37,6 @@ export default function ReviewModal({ orderId, items, onClose, onDone }: Props) 
     setLoading(true)
     setError(null)
 
-    // Insère les avis + recalcule les notes
     for (const p of produits) {
       const pid = p.id!
       const { error: insErr } = await supabase.from('reviews').insert({
@@ -50,10 +51,9 @@ export default function ReviewModal({ orderId, items, onClose, onDone }: Props) 
         setError('Erreur avis : ' + insErr.message)
         return
       }
-      await supabase.rpc('recalculer_note', { pid })
+      await supabase.rpc('recalculer_note', { pid: Number(pid) })
     }
 
-    // Marque la commande comme reçue + notée
     const { error: updErr } = await supabase
       .from('orders')
       .update({ status: 'reçu', reviewed: true })
@@ -65,6 +65,11 @@ export default function ReviewModal({ orderId, items, onClose, onDone }: Props) 
     if (updErr) {
       setError('Erreur commande : ' + updErr.message)
       return
+    }
+
+    // Notifie le vendeur que le client a confirmé la réception
+    if (sellerId) {
+      await emailReceptionConfirmee(sellerId, orderId)
     }
 
     onDone()
