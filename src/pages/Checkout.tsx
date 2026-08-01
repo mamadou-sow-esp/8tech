@@ -32,7 +32,6 @@ export default function Checkout() {
     setLoading(true)
     setError(null)
 
-    // 1. Vérifie le stock réel
     const ids = items.map((i) => i.id)
     const { data: stockData, error: stockErr } = await supabase
       .from('products')
@@ -55,7 +54,6 @@ export default function Checkout() {
       }
     }
 
-    // 2. Regroupe par vendeur
     const parVendeur: Record<string, typeof items> = {}
     for (const item of items) {
       const key = item.owner_id ?? 'inconnu'
@@ -63,10 +61,7 @@ export default function Checkout() {
       parVendeur[key].push(item)
     }
 
-    // Détecte si la commande contient au moins un produit à payer en ligne (Wave)
     const contientWave = items.some((i) => i.payment_mode === 'wave')
-
-    // 3. Crée une commande par vendeur
     let orderPourPaiement: number | null = null
 
     for (const [sellerId, vendeurItems] of Object.entries(parVendeur)) {
@@ -96,7 +91,6 @@ export default function Checkout() {
         return
       }
 
-      // Décrémente le stock
       for (const item of vendeurItems) {
         await supabase.rpc('decrementer_stock', {
           produit_id: item.id,
@@ -105,15 +99,12 @@ export default function Checkout() {
       }
 
       if (vendeurWave && orderData) {
-        // On garde cette commande pour lancer le paiement Wave
         orderPourPaiement = orderData.id
       } else if (sellerId !== 'inconnu' && orderData) {
-        // Flux cash : on notifie le vendeur tout de suite
         await emailNouvelleCommande(sellerId, orderData.id, formatPrice(sousTotal), nom)
       }
     }
 
-    // 4. Si paiement Wave requis → on crée le paiement et on redirige
     if (contientWave && orderPourPaiement) {
       const totalWave = items
         .filter((i) => i.payment_mode === 'wave')
@@ -130,12 +121,10 @@ export default function Checkout() {
       }
 
       clear()
-      // Redirection vers la page de paiement Wave
       window.location.href = data.payment_url
       return
     }
 
-    // 5. Flux cash normal
     setLoading(false)
     clear()
     navigate('/commandes')
@@ -143,9 +132,9 @@ export default function Checkout() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-white flex flex-col">
+      <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
         <Navbar />
-        <main className="flex-1 max-w-3xl mx-auto px-4 py-16 text-center">
+        <main className="flex-1 max-w-3xl mx-auto px-4 py-16 text-center w-full">
           <p className="text-slate-600">Votre panier est vide.</p>
           <Link to="/produits" className="text-sky-brand font-medium mt-4 inline-block">Voir les produits</Link>
         </main>
@@ -157,14 +146,14 @@ export default function Checkout() {
   const contientWave = items.some((i) => i.payment_mode === 'wave')
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
       <Navbar />
-      <main className="flex-1 max-w-5xl mx-auto px-4 md:px-6 py-8 w-full grid md:grid-cols-3 gap-8">
-        <div className="md:col-span-2">
+      <main className="flex-1 w-full max-w-5xl mx-auto px-4 md:px-6 py-6 md:py-8 grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+        <div className="md:col-span-2 min-w-0">
           <h1 className="font-display text-2xl font-bold text-brand-900 mb-6">Livraison</h1>
 
           {error && (
-            <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</div>
+            <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2 break-words">{error}</div>
           )}
 
           <div className="space-y-4">
@@ -174,7 +163,7 @@ export default function Checkout() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Téléphone</label>
-              <input type="tel" value={telephone} onChange={(e) => setTelephone(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
+              <input type="tel" inputMode="tel" value={telephone} onChange={(e) => setTelephone(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Adresse</label>
@@ -196,19 +185,19 @@ export default function Checkout() {
           </div>
         </div>
 
-        <div className="border border-slate-100 rounded-xl p-6 h-fit">
+        <div className="border border-slate-100 rounded-xl p-5 md:p-6 h-fit min-w-0">
           <h2 className="font-display font-bold text-brand-900 mb-4">Votre commande</h2>
           <div className="space-y-2 mb-4">
             {items.map((item) => (
-              <div key={item.id} className="flex justify-between text-sm text-slate-600">
-                <span className="truncate pr-2">{item.name} × {item.qty}</span>
-                <span className="whitespace-nowrap">{formatPrice(item.price * item.qty)}</span>
+              <div key={item.id} className="flex justify-between gap-2 text-sm text-slate-600">
+                <span className="truncate min-w-0">{item.name} × {item.qty}</span>
+                <span className="whitespace-nowrap shrink-0">{formatPrice(item.price * item.qty)}</span>
               </div>
             ))}
           </div>
           <div className="flex justify-between font-display font-bold text-brand-900 border-t border-slate-100 pt-4">
             <span>Total</span>
-            <span>{formatPrice(totalPrice)}</span>
+            <span className="whitespace-nowrap">{formatPrice(totalPrice)}</span>
           </div>
           <button onClick={handleOrder} disabled={loading} className="w-full mt-6 bg-sky-brand hover:bg-sky-brand-dark text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-60">
             {loading ? 'Traitement...' : contientWave ? 'Payer avec Wave' : 'Confirmer la commande'}
