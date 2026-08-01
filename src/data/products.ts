@@ -11,6 +11,7 @@ export type Product = {
   description?: string
   stock?: number
   condition?: string
+  payment_mode?: string
 }
 
 export const formatPrice = (n: number) => n.toLocaleString('fr-FR') + ' F'

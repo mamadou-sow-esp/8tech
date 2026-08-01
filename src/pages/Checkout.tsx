@@ -32,7 +32,7 @@ export default function Checkout() {
     setLoading(true)
     setError(null)
 
-    // 1. Vérifie le stock réel en base
+    // 1. Vérifie le stock réel
     const ids = items.map((i) => i.id)
     const { data: stockData, error: stockErr } = await supabase
       .from('products')
@@ -55,7 +55,7 @@ export default function Checkout() {
       }
     }
 
-    // 2. Regroupe les articles par vendeur (owner_id)
+    // 2. Regroupe par vendeur
     const parVendeur: Record<string, typeof items> = {}
     for (const item of items) {
       const key = item.owner_id ?? 'inconnu'
@@ -63,9 +63,15 @@ export default function Checkout() {
       parVendeur[key].push(item)
     }
 
+    // Détecte si la commande contient au moins un produit à payer en ligne (Wave)
+    const contientWave = items.some((i) => i.payment_mode === 'wave')
+
     // 3. Crée une commande par vendeur
+    let orderPourPaiement: number | null = null
+
     for (const [sellerId, vendeurItems] of Object.entries(parVendeur)) {
       const sousTotal = vendeurItems.reduce((sum, i) => sum + i.price * i.qty, 0)
+      const vendeurWave = vendeurItems.some((i) => i.payment_mode === 'wave')
 
       const { data: orderData, error } = await supabase
         .from('orders')
@@ -78,6 +84,8 @@ export default function Checkout() {
           telephone,
           adresse,
           ville,
+          status: vendeurWave ? 'en_attente_paiement' : 'en attente',
+          payment_status: vendeurWave ? 'pending' : 'non_requis',
         })
         .select()
         .single()
@@ -88,7 +96,7 @@ export default function Checkout() {
         return
       }
 
-      // Décrémente le stock des articles de ce vendeur
+      // Décrémente le stock
       for (const item of vendeurItems) {
         await supabase.rpc('decrementer_stock', {
           produit_id: item.id,
@@ -96,12 +104,38 @@ export default function Checkout() {
         })
       }
 
-      // Notifie ce vendeur
-      if (sellerId !== 'inconnu' && orderData) {
+      if (vendeurWave && orderData) {
+        // On garde cette commande pour lancer le paiement Wave
+        orderPourPaiement = orderData.id
+      } else if (sellerId !== 'inconnu' && orderData) {
+        // Flux cash : on notifie le vendeur tout de suite
         await emailNouvelleCommande(sellerId, orderData.id, formatPrice(sousTotal), nom)
       }
     }
 
+    // 4. Si paiement Wave requis → on crée le paiement et on redirige
+    if (contientWave && orderPourPaiement) {
+      const totalWave = items
+        .filter((i) => i.payment_mode === 'wave')
+        .reduce((sum, i) => sum + i.price * i.qty, 0)
+
+      const { data, error: payErr } = await supabase.functions.invoke('create-payment', {
+        body: { orderId: orderPourPaiement, amount: totalWave, customerPhone: telephone },
+      })
+
+      if (payErr || !data?.payment_url) {
+        setLoading(false)
+        setError('Erreur lors de la création du paiement. Réessayez.')
+        return
+      }
+
+      clear()
+      // Redirection vers la page de paiement Wave
+      window.location.href = data.payment_url
+      return
+    }
+
+    // 5. Flux cash normal
     setLoading(false)
     clear()
     navigate('/commandes')
@@ -119,6 +153,8 @@ export default function Checkout() {
       </div>
     )
   }
+
+  const contientWave = items.some((i) => i.payment_mode === 'wave')
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
@@ -148,9 +184,15 @@ export default function Checkout() {
               <label className="block text-sm font-medium text-slate-700 mb-1">Ville</label>
               <input type="text" value={ville} onChange={(e) => setVille(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
             </div>
-            <p className="text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-3">
-               Paiement en espèces à la livraison. Le règlement se fait directement avec le vendeur.
-            </p>
+            {contientWave ? (
+              <p className="text-sm text-slate-600 bg-sky-brand/5 border border-sky-brand/20 rounded-lg px-3 py-3">
+                📱 Paiement en ligne via Wave. Vous serez redirigé pour régler votre commande après validation.
+              </p>
+            ) : (
+              <p className="text-sm text-slate-500 bg-slate-50 border border-slate-100 rounded-lg px-3 py-3">
+                💵 Paiement en espèces à la livraison. Le règlement se fait directement avec le vendeur.
+              </p>
+            )}
           </div>
         </div>
 
@@ -169,7 +211,7 @@ export default function Checkout() {
             <span>{formatPrice(totalPrice)}</span>
           </div>
           <button onClick={handleOrder} disabled={loading} className="w-full mt-6 bg-sky-brand hover:bg-sky-brand-dark text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-60">
-            {loading ? 'Traitement...' : 'Confirmer la commande'}
+            {loading ? 'Traitement...' : contientWave ? 'Payer avec Wave' : 'Confirmer la commande'}
           </button>
         </div>
       </main>

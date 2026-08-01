@@ -27,6 +27,8 @@ import Dashboard from './pages/Dashboard'
 import MentionsLegales from './pages/MentionsLegales'
 import Confidentialite from './pages/Confidentialite'
 import CGU from './pages/CGU'
+import PaiementReussi from './pages/PaiementReussi'
+import PaiementEchoue from './pages/PaiementEchoue'
 
 export default function App() {
   return (
@@ -39,6 +41,8 @@ export default function App() {
               <Route path="/mentions-legales" element={<MentionsLegales />} />
               <Route path="/confidentialite" element={<Confidentialite />} />
               <Route path="/cgu" element={<CGU />} />
+              <Route path="/paiement-reussi" element={<PaiementReussi />} />
+              <Route path="/paiement-echoue" element={<PaiementEchoue />} />
               <Route path="/produits" element={<Produits />} />
               <Route path="/produit/:id" element={<ProduitDetail />} />
               <Route path="/login" element={<Login />} />

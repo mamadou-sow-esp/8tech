@@ -85,11 +85,12 @@ export default function ProduitDetail() {
   const nextImg = () => setImgIndex((i) => (i === galerie.length - 1 ? 0 : i + 1))
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
       <Navbar />
-      <main className="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-8 w-full grid md:grid-cols-2 gap-10">
-        <div>
-          <div className="relative aspect-square bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center text-slate-400">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 md:px-6 py-8 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10">
+        {/* Carrousel */}
+        <div className="w-full min-w-0">
+          <div className="relative w-full aspect-square bg-slate-100 rounded-2xl overflow-hidden flex items-center justify-center text-slate-400">
             {galerie.length > 0 ? (
               <img src={galerie[imgIndex]} alt={product.name} className="w-full h-full object-cover" />
             ) : (
@@ -124,10 +125,11 @@ export default function ProduitDetail() {
           )}
         </div>
 
-        <div>
-          <h1 className="font-display text-2xl md:text-3xl font-bold text-brand-900">{product.name}</h1>
+        {/* Infos */}
+        <div className="w-full min-w-0">
+          <h1 className="font-display text-2xl md:text-3xl font-bold text-brand-900 break-words">{product.name}</h1>
 
-          <div className="mt-3 flex items-center gap-4 text-sm text-slate-500">
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-slate-500">
             {product.owner_id ? (
               <Link to={`/boutique/${product.owner_id}`} className="flex items-center gap-1 text-sky-brand hover:underline">
                 <Store className="w-4 h-4" /> {product.seller}
@@ -145,7 +147,7 @@ export default function ProduitDetail() {
           <div className="mt-3">
             {enStock ? (
               <span className="inline-flex items-center gap-1 text-sm text-green-600 font-medium">
-                <Package className="w-4 h-4" /> En stock : {product.stock} disponible{(product.stock ?? 0) > 1 ? 's' : ''}
+                <Package className="w-4 h-4" /> En stock — {product.stock} disponible{(product.stock ?? 0) > 1 ? 's' : ''}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-sm text-red-500 font-medium">
@@ -179,7 +181,7 @@ export default function ProduitDetail() {
           {product.description && (
             <div className="mt-8">
               <h2 className="font-display font-bold text-brand-900 mb-2">Description</h2>
-              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">{product.description}</p>
+              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line break-words">{product.description}</p>
             </div>
           )}
 
@@ -189,13 +191,13 @@ export default function ProduitDetail() {
               <div className="space-y-2 text-sm text-slate-600">
                 {(vendeur.adresse || vendeur.ville) && (
                   <p className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-sky-brand" />
-                    {[vendeur.adresse, vendeur.ville].filter(Boolean).join(', ')}
+                    <MapPin className="w-4 h-4 text-sky-brand shrink-0" />
+                    <span className="break-words">{[vendeur.adresse, vendeur.ville].filter(Boolean).join(', ')}</span>
                   </p>
                 )}
                 {vendeur.telephone && (
                   <p className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-sky-brand" /> {vendeur.telephone}
+                    <Phone className="w-4 h-4 text-sky-brand shrink-0" /> {vendeur.telephone}
                   </p>
                 )}
               </div>
@@ -203,8 +205,8 @@ export default function ProduitDetail() {
           )}
 
           <div className="mt-8 space-y-3 text-sm text-slate-600">
-            <p className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-sky-brand" /> Paiement en cash à la livraison</p>
-            <p className="flex items-center gap-2"><Truck className="w-4 h-4 text-sky-brand" /> Livraison suivie partout au Sénégal</p>
+            <p className="flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-sky-brand shrink-0" /> Paiement en cash à la livraison</p>
+            <p className="flex items-center gap-2"><Truck className="w-4 h-4 text-sky-brand shrink-0" /> Livraison suivie partout au Sénégal</p>
           </div>
 
           {avisAvecCommentaire.length > 0 && (
@@ -220,7 +222,7 @@ export default function ProduitDetail() {
                         <Star key={n} className={`w-4 h-4 ${n <= a.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'}`} />
                       ))}
                     </div>
-                    <p className="text-sm text-slate-600">{a.comment}</p>
+                    <p className="text-sm text-slate-600 break-words">{a.comment}</p>
                     <p className="text-xs text-slate-400 mt-1">{new Date(a.created_at).toLocaleDateString('fr-FR')}</p>
                   </div>
                 ))}

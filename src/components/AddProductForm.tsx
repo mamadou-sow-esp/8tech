@@ -11,13 +11,18 @@ type Props = {
   product?: Product | null
 }
 
+const EMAIL_PAIEMENT_WAVE = 'sowmomo689@gmail.com'
+
 export default function AddProductForm({ seller, onClose, onAdded, product }: Props) {
   const isEdit = !!product
   const { user } = useAuth()
+  const peutProposerWave = user?.email === EMAIL_PAIEMENT_WAVE
+
   const [name, setName] = useState(product?.name ?? '')
   const [price, setPrice] = useState(product ? String(product.price) : '')
   const [category, setCategory] = useState(product?.category ?? 'Smartphones')
   const [condition, setCondition] = useState(product?.condition ?? 'Neuf')
+  const [paymentMode, setPaymentMode] = useState(product?.payment_mode ?? 'cash')
   const [description, setDescription] = useState(product?.description ?? '')
   const [stock, setStock] = useState(product ? String(product.stock ?? 0) : '')
 
@@ -78,11 +83,15 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
 
     const allImages = [...existingImages, ...uploadedUrls, ...urls]
 
+    // Le mode Wave n'est retenu que pour le compte autorisé
+    const modeFinal = peutProposerWave ? paymentMode : 'cash'
+
     const payload: Record<string, unknown> = {
       name,
       price: Number(price),
       category,
       condition,
+      payment_mode: modeFinal,
       description: description || null,
       stock: Number(stock) || 0,
       images: allImages,
@@ -169,6 +178,20 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
               </select>
             </div>
           </div>
+
+          {/* Mode de paiement : réservé au compte autorisé */}
+          {peutProposerWave && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Mode de paiement</label>
+              <select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand">
+                <option value="cash">Paiement à la livraison (cash)</option>
+                <option value="wave">Paiement en ligne (Wave)</option>
+              </select>
+              <p className="text-xs text-slate-400 mt-1">
+                Avec Wave, le client paie en ligne au moment de la commande.
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Images du produit</label>
