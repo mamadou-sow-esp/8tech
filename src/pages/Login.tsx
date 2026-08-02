@@ -46,7 +46,7 @@ export default function Login() {
     } else if (isSignup) {
       setSignupSuccess(true)
     } else {
-      navigate('/compte')
+      navigate('/')
     }
   }
 

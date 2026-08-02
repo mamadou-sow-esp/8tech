@@ -1,10 +1,31 @@
-import { Star, Store } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { formatPrice } from '../../data/products'
 import { useProducts } from '../../hooks/useProducts'
+import ProductCard from '../ProductCard'
+import type { Product } from '../../data/products'
+
+// Mélange déterministe basé sur une graine (le jour) :
+// même ordre toute la journée, change chaque 24h.
+function melangeDuJour(products: Product[]): Product[] {
+  // Graine = nombre de jours écoulés depuis 1970 (change à minuit)
+  const graine = Math.floor(Date.now() / (1000 * 60 * 60 * 24))
+
+  // Générateur pseudo-aléatoire simple, déterministe pour une graine donnée
+  let seed = graine
+  const random = () => {
+    seed = (seed * 9301 + 49297) % 233280
+    return seed / 233280
+  }
+
+  // Copie + tri par une valeur aléatoire stable pour la journée
+  return [...products]
+    .map((p) => ({ p, r: random() * (p.id + 1) }))
+    .sort((a, b) => a.r - b.r)
+    .map((x) => x.p)
+}
 
 export default function FeaturedProducts() {
   const { products, loading } = useProducts()
+
+  const selection = melangeDuJour(products).slice(0, 6)
 
   return (
     <section className="bg-slate-50 py-12 md:py-16">
@@ -14,24 +35,12 @@ export default function FeaturedProducts() {
         </h2>
         {loading ? (
           <p className="text-slate-500">Chargement...</p>
+        ) : selection.length === 0 ? (
+          <p className="text-slate-500">Aucun produit pour le moment.</p>
         ) : (
           <div className="grid grid-cols-3 md:grid-cols-4 gap-3 md:gap-6">
-            {products.slice(0, 12).map((p) => (
-              <Link key={p.id} to={`/produit/${p.id}`} className="bg-white rounded-xl border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
-                <div className="aspect-square bg-slate-100 flex items-center justify-center text-slate-400 text-xs overflow-hidden">
-                  {p.image_url ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" /> : 'Photo'}
-                </div>
-                <div className="p-2 md:p-4">
-                  <h3 className="text-xs md:text-sm font-semibold text-slate-800 line-clamp-2 leading-tight">{p.name}</h3>
-                  <p className="mt-1 md:mt-2 font-display font-bold text-brand-900 text-xs md:text-base">{formatPrice(p.price)}</p>
-                  <div className="mt-2 flex items-center justify-between text-[10px] md:text-xs text-slate-500">
-                    <span className="flex items-center gap-1 truncate"><Store className="w-3 h-3 shrink-0" /> <span className="truncate">{p.seller}</span></span>
-                    {p.rating > 0 && (
-                      <span className="flex items-center gap-0.5 text-amber-600 shrink-0"><Star className="w-3 h-3 fill-amber-500 text-amber-500" /> {p.rating}</span>
-                    )}
-                  </div>
-                </div>
-              </Link>
+            {selection.map((p) => (
+              <ProductCard key={p.id} product={p} />
             ))}
           </div>
         )}

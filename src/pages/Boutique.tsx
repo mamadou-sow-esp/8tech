@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { Star, Store, MapPin, Globe, Package } from 'lucide-react'
+import { useParams } from 'react-router-dom'
+import { Store, MapPin, Globe, Package } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
 import Footer from '../components/layout/Footer'
-import { formatPrice } from '../data/products'
 import type { Product } from '../data/products'
 import { supabase } from '../lib/supabaseClient'
+import ProductCard from '../components/ProductCard'
 
 type Vendeur = { username: string; shop_name: string | null; ville: string | null; website: string | null; avatar_url: string | null }
 
@@ -30,7 +30,7 @@ export default function Boutique() {
   const nomBoutique = vendeur?.shop_name || vendeur?.username || 'Boutique'
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
       <Navbar />
       <main className="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-8 w-full">
         <div className="flex items-center gap-4 mb-8 pb-6 border-b border-slate-100">
@@ -41,9 +41,9 @@ export default function Boutique() {
               nomBoutique.charAt(0)
             )}
           </div>
-          <div>
+          <div className="min-w-0">
             <h1 className="font-display text-2xl font-bold text-brand-900 flex items-center gap-2">
-              <Store className="w-5 h-5 text-sky-brand" /> {nomBoutique}
+              <Store className="w-5 h-5 text-sky-brand shrink-0" /> <span className="truncate">{nomBoutique}</span>
             </h1>
             <div className="flex flex-wrap gap-4 mt-1 text-sm text-slate-500">
               {vendeur?.ville && (
@@ -70,20 +70,7 @@ export default function Boutique() {
         ) : (
           <div className="grid grid-cols-3 md:grid-cols-4 gap-3 md:gap-6">
             {produits.map((p) => (
-              <Link key={p.id} to={`/produit/${p.id}`} className="bg-white rounded-xl border border-slate-100 overflow-hidden hover:shadow-md transition-shadow">
-                <div className="aspect-square bg-slate-100 flex items-center justify-center text-slate-400 text-xs overflow-hidden">
-                  {p.image_url ? <img src={p.image_url} alt={p.name} className="w-full h-full object-cover" /> : 'Photo'}
-                </div>
-                <div className="p-2 md:p-4">
-                  <h3 className="text-xs md:text-sm font-semibold text-slate-800 line-clamp-2 leading-tight">{p.name}</h3>
-                  <p className="mt-1 md:mt-2 font-display font-bold text-brand-900 text-xs md:text-base">{formatPrice(p.price)}</p>
-                  {p.rating > 0 && (
-                    <div className="mt-2 flex items-center gap-0.5 text-[10px] md:text-xs text-amber-600">
-                      <Star className="w-3 h-3 fill-amber-500 text-amber-500" /> {p.rating}
-                    </div>
-                  )}
-                </div>
-              </Link>
+              <ProductCard key={p.id} product={p} />
             ))}
           </div>
         )}
