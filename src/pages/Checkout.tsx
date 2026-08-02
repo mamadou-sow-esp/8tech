@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/layout/Navbar'
 import Footer from '../components/layout/Footer'
@@ -8,6 +8,8 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { emailNouvelleCommande } from '../lib/sendEmail'
 
+type Zone = { id: number; quartier: string; zone: string; prix: number }
+
 export default function Checkout() {
   const { items, totalPrice, clear } = useCart()
   const { user } = useAuth()
@@ -16,22 +18,41 @@ export default function Checkout() {
   const [nom, setNom] = useState('')
   const [telephone, setTelephone] = useState('')
   const [adresse, setAdresse] = useState('')
-  const [ville, setVille] = useState('')
+  const [quartierId, setQuartierId] = useState('')
+  const [zones, setZones] = useState<Zone[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Charge les quartiers depuis Supabase
+  useEffect(() => {
+    supabase
+      .from('zones_livraison')
+      .select('id, quartier, zone, prix')
+      .eq('actif', true)
+      .order('zone')
+      .order('quartier')
+      .then(({ data }) => setZones((data as Zone[]) || []))
+  }, [])
+
+  const zoneChoisie = zones.find((z) => z.id === Number(quartierId))
+  const fraisLivraison = zoneChoisie?.prix ?? 0
+  const totalAvecLivraison = totalPrice + fraisLivraison
+
+  const formValide = nom.trim() && telephone.trim() && adresse.trim() && quartierId
 
   const handleOrder = async () => {
     if (!user) {
       navigate('/login')
       return
     }
-    if (!nom || !telephone || !adresse || !ville) {
-      setError('Merci de remplir tous les champs de livraison.')
+    if (!formValide) {
+      setError('Merci de remplir tous les champs, y compris le quartier de livraison.')
       return
     }
     setLoading(true)
     setError(null)
 
+    // Vérif stock
     const ids = items.map((i) => i.id)
     const { data: stockData, error: stockErr } = await supabase
       .from('products')
@@ -54,6 +75,9 @@ export default function Checkout() {
       }
     }
 
+    const quartierNom = zoneChoisie?.quartier ?? ''
+
+    // Regroupe par vendeur
     const parVendeur: Record<string, typeof items> = {}
     for (const item of items) {
       const key = item.owner_id ?? 'inconnu'
@@ -61,12 +85,19 @@ export default function Checkout() {
       parVendeur[key].push(item)
     }
 
+    const vendeurIds = Object.keys(parVendeur)
     const contientWave = items.some((i) => i.payment_mode === 'wave')
     let orderPourPaiement: number | null = null
+    let totalWavePourPaiement = 0
 
     for (const [sellerId, vendeurItems] of Object.entries(parVendeur)) {
       const sousTotal = vendeurItems.reduce((sum, i) => sum + i.price * i.qty, 0)
       const vendeurWave = vendeurItems.some((i) => i.payment_mode === 'wave')
+
+      // Frais de livraison : on les met sur la 1re commande seulement (une seule livraison)
+      const estPremierVendeur = sellerId === vendeurIds[0]
+      const fraisPourCetteCommande = estPremierVendeur ? fraisLivraison : 0
+      const totalCommande = sousTotal + fraisPourCetteCommande
 
       const { data: orderData, error } = await supabase
         .from('orders')
@@ -74,11 +105,13 @@ export default function Checkout() {
           user_id: user.id,
           seller_id: sellerId === 'inconnu' ? null : sellerId,
           items: vendeurItems,
-          total: sousTotal,
+          total: totalCommande,
           nom,
           telephone,
           adresse,
-          ville,
+          ville: quartierNom,
+          quartier: quartierNom,
+          frais_livraison: fraisPourCetteCommande,
           status: vendeurWave ? 'en_attente_paiement' : 'en attente',
           payment_status: vendeurWave ? 'pending' : 'non_requis',
         })
@@ -100,18 +133,16 @@ export default function Checkout() {
 
       if (vendeurWave && orderData) {
         orderPourPaiement = orderData.id
+        totalWavePourPaiement = totalCommande
       } else if (sellerId !== 'inconnu' && orderData) {
-        await emailNouvelleCommande(sellerId, orderData.id, formatPrice(sousTotal), nom)
+        await emailNouvelleCommande(sellerId, orderData.id, formatPrice(totalCommande), nom)
       }
     }
 
+    // Paiement Wave
     if (contientWave && orderPourPaiement) {
-      const totalWave = items
-        .filter((i) => i.payment_mode === 'wave')
-        .reduce((sum, i) => sum + i.price * i.qty, 0)
-
       const { data, error: payErr } = await supabase.functions.invoke('create-payment', {
-        body: { orderId: orderPourPaiement, amount: totalWave, customerPhone: telephone },
+        body: { orderId: orderPourPaiement, amount: totalWavePourPaiement, customerPhone: telephone },
       })
 
       if (payErr || !data?.payment_url) {
@@ -145,6 +176,13 @@ export default function Checkout() {
 
   const contientWave = items.some((i) => i.payment_mode === 'wave')
 
+  // Groupe les quartiers par zone pour l'affichage
+  const zonesParGroupe = zones.reduce((acc, z) => {
+    if (!acc[z.zone]) acc[z.zone] = []
+    acc[z.zone].push(z)
+    return acc
+  }, {} as Record<string, Zone[]>)
+
   return (
     <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
       <Navbar />
@@ -158,20 +196,39 @@ export default function Checkout() {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Nom complet</label>
-              <input type="text" value={nom} onChange={(e) => setNom(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Nom complet <span className="text-red-500">*</span>
+              </label>
+              <input type="text" value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Votre nom et prénom" className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Téléphone</label>
-              <input type="tel" inputMode="tel" value={telephone} onChange={(e) => setTelephone(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Téléphone <span className="text-red-500">*</span>
+              </label>
+              <input type="tel" inputMode="tel" value={telephone} onChange={(e) => setTelephone(e.target.value)} placeholder="77 000 00 00" className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Adresse</label>
-              <input type="text" value={adresse} onChange={(e) => setAdresse(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Quartier de livraison <span className="text-red-500">*</span>
+              </label>
+              <select value={quartierId} onChange={(e) => setQuartierId(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand">
+                <option value="">-- Choisissez votre quartier --</option>
+                {Object.entries(zonesParGroupe).map(([zone, quartiers]) => (
+                  <optgroup key={zone} label={zone}>
+                    {quartiers.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.quartier} — {formatPrice(z.prix)}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Ville</label>
-              <input type="text" value={ville} onChange={(e) => setVille(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                Adresse précise <span className="text-red-500">*</span>
+              </label>
+              <input type="text" value={adresse} onChange={(e) => setAdresse(e.target.value)} placeholder="Rue, immeuble, repère..." className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
             </div>
             {contientWave ? (
               <p className="text-sm text-slate-600 bg-sky-brand/5 border border-sky-brand/20 rounded-lg px-3 py-3">
@@ -195,13 +252,35 @@ export default function Checkout() {
               </div>
             ))}
           </div>
-          <div className="flex justify-between font-display font-bold text-brand-900 border-t border-slate-100 pt-4">
-            <span>Total</span>
-            <span className="whitespace-nowrap">{formatPrice(totalPrice)}</span>
+
+          <div className="border-t border-slate-100 pt-3 space-y-2 text-sm">
+            <div className="flex justify-between text-slate-600">
+              <span>Sous-total</span>
+              <span>{formatPrice(totalPrice)}</span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span>Livraison{zoneChoisie ? ` (${zoneChoisie.quartier})` : ''}</span>
+              <span>{quartierId ? formatPrice(fraisLivraison) : '—'}</span>
+            </div>
           </div>
-          <button onClick={handleOrder} disabled={loading} className="w-full mt-6 bg-sky-brand hover:bg-sky-brand-dark text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-60">
+
+          <div className="flex justify-between font-display font-bold text-brand-900 border-t border-slate-100 pt-3 mt-3">
+            <span>Total</span>
+            <span className="whitespace-nowrap">{formatPrice(totalAvecLivraison)}</span>
+          </div>
+
+          <button
+            onClick={handleOrder}
+            disabled={loading || !formValide}
+            className="w-full mt-6 bg-sky-brand hover:bg-sky-brand-dark text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             {loading ? 'Traitement...' : contientWave ? 'Payer avec Wave' : 'Confirmer la commande'}
           </button>
+          {!formValide && (
+            <p className="text-xs text-slate-400 text-center mt-2">
+              Remplissez tous les champs pour continuer.
+            </p>
+          )}
         </div>
       </main>
       <Footer />
