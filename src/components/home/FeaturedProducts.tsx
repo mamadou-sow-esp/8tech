@@ -25,7 +25,7 @@ function melangeDuJour(products: Product[]): Product[] {
 export default function FeaturedProducts() {
   const { products, loading } = useProducts()
 
-  const selection = melangeDuJour(products).slice(0, 6)
+  const selection = melangeDuJour(products).slice(0, 12)
 
   return (
     <section className="bg-slate-50 py-12 md:py-16">
