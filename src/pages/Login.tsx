@@ -5,6 +5,32 @@ import Navbar from '../components/layout/Navbar'
 import Footer from '../components/layout/Footer'
 import { useAuth } from '../context/AuthContext'
 
+function traduireErreur(msg: string): string {
+  const m = msg.toLowerCase()
+  if (m.includes('password should contain')) {
+    return 'Votre mot de passe doit contenir au moins : une minuscule, une majuscule, un chiffre et un caractère spécial (ex : Passer1234!).'
+  }
+  if (m.includes('password should be at least')) {
+    return 'Votre mot de passe est trop court. Utilisez au moins 8 caractères.'
+  }
+  if (m.includes('user already registered') || m.includes('already registered')) {
+    return 'Un compte existe déjà avec cet email. Connectez-vous.'
+  }
+  if (m.includes('invalid login credentials')) {
+    return 'Email ou mot de passe incorrect.'
+  }
+  if (m.includes('email not confirmed')) {
+    return "Votre email n'est pas encore confirmé. Vérifiez votre boîte mail."
+  }
+  if (m.includes('unable to validate email') || m.includes('invalid email')) {
+    return "L'adresse email n'est pas valide."
+  }
+  if (m.includes('rate limit') || m.includes('too many')) {
+    return 'Trop de tentatives. Réessayez dans quelques minutes.'
+  }
+  return msg
+}
+
 export default function Login() {
   const [isSignup, setIsSignup] = useState(false)
   const [email, setEmail] = useState('')
@@ -42,7 +68,7 @@ export default function Login() {
     setLoading(false)
 
     if (error) {
-      setError(error)
+      setError(traduireErreur(error))
     } else if (isSignup) {
       setSignupSuccess(true)
     } else {
@@ -136,10 +162,20 @@ export default function Login() {
                       onChange={(e) => setPassword(e.target.value)}
                       className="w-full h-11 pl-3 pr-11 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand"
                     />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                    >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
+                  {isSignup && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un symbole (ex : Passer1234!).
+                    </p>
+                  )}
                 </div>
                 <button onClick={handleSubmit} disabled={loading} className="w-full bg-sky-brand hover:bg-sky-brand-dark text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-60">
                   {loading ? 'Chargement...' : isSignup ? "S'inscrire" : 'Se connecter'}

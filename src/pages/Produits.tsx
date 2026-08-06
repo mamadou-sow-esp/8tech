@@ -4,6 +4,7 @@ import { Search } from 'lucide-react'
 import Navbar from '../components/layout/Navbar'
 import Footer from '../components/layout/Footer'
 import { useProducts } from '../hooks/useProducts'
+import { supabase } from '../lib/supabaseClient'
 import ProductCard from '../components/ProductCard'
 
 const categories = ['Toutes', 'Smartphones', 'Ordinateurs', 'Audio', 'Montres connectées', 'Photo & vidéo', 'Gaming']
@@ -14,19 +15,38 @@ export default function Produits() {
   const [query, setQuery] = useState('')
   const [categorie, setCategorie] = useState('Toutes')
   const [tri, setTri] = useState<'recent' | 'prix-asc' | 'prix-desc'>('recent')
+  const [sousCategories, setSousCategories] = useState<string[]>([])
+  const [tagActif, setTagActif] = useState<string | null>(null)
 
   useEffect(() => {
     setQuery(searchParams.get('q') || '')
   }, [searchParams])
+
+  // Charge les sous-catégories quand on choisit une catégorie précise
+  useEffect(() => {
+    setTagActif(null)
+    if (categorie === 'Toutes') {
+      setSousCategories([])
+      return
+    }
+    supabase
+      .from('sous_categories')
+      .select('nom')
+      .eq('categorie', categorie)
+      .order('nom')
+      .then(({ data }) => setSousCategories((data || []).map((s: { nom: string }) => s.nom)))
+  }, [categorie])
 
   let filtered = products.filter((p) => {
     const q = query.toLowerCase()
     const matchQuery =
       p.name.toLowerCase().includes(q) ||
       p.seller.toLowerCase().includes(q) ||
-      p.category.toLowerCase().includes(q)
+      p.category.toLowerCase().includes(q) ||
+      (p.tags || []).some((t) => t.toLowerCase().includes(q))
     const matchCat = categorie === 'Toutes' || p.category === categorie
-    return matchQuery && matchCat
+    const matchTag = !tagActif || (p.tags || []).includes(tagActif)
+    return matchQuery && matchCat && matchTag
   })
 
   if (tri === 'prix-asc') filtered = [...filtered].sort((a, b) => a.price - b.price)
@@ -38,22 +58,19 @@ export default function Produits() {
       <main className="flex-1 max-w-7xl mx-auto px-4 md:px-6 py-8 w-full">
         <h1 className="font-display text-2xl font-bold text-brand-900 mb-6">Tous les produits</h1>
 
-        {/* Barre de recherche */}
         <div className="relative mb-4 max-w-md">
           <input type="text" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher un produit..." className="w-full h-11 pl-11 pr-4 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         </div>
 
-        {/* Filtres rapides par catégorie (puces) */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
+        {/* Filtres catégories */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
           {categories.map((c) => (
             <button
               key={c}
               onClick={() => setCategorie(c)}
               className={`shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                categorie === c
-                  ? 'bg-sky-brand text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                categorie === c ? 'bg-sky-brand text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
               {c}
@@ -61,7 +78,31 @@ export default function Produits() {
           ))}
         </div>
 
-        {/* Tri + compteur */}
+        {/* Sous-filtres (tags) de la catégorie choisie */}
+        {sousCategories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
+            <button
+              onClick={() => setTagActif(null)}
+              className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                !tagActif ? 'bg-brand-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}
+            >
+              Tout {categorie}
+            </button>
+            {sousCategories.map((sc) => (
+              <button
+                key={sc}
+                onClick={() => setTagActif(sc)}
+                className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  tagActif === sc ? 'bg-brand-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                {sc}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center gap-3 mb-6">
           <select value={tri} onChange={(e) => setTri(e.target.value as typeof tri)} className="h-9 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand">
             <option value="recent">Plus récents</option>

@@ -12,6 +12,7 @@ type Profile = {
   ville: string | null
   website: string | null
   avatar_url: string | null
+  livraison_prix_defaut: number | null
 }
 
 type AuthContextType = {

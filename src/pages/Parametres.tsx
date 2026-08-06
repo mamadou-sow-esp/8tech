@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Camera } from 'lucide-react'
+import { Camera, Truck } from 'lucide-react'
 import CompteLayout from '../components/layout/CompteLayout'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
+
+const EMAIL_TARIFS_FIXES = 'sowmomo689@gmail.com'
+
+type Commune = { id: number; nom: string; zone: string }
 
 export default function Parametres() {
   const { user, profile, refreshProfile } = useAuth()
@@ -17,7 +21,16 @@ export default function Parametres() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
-  // Remplit les champs dès que le profil est chargé
+  const [prixDefaut, setPrixDefaut] = useState('')
+  const [communes, setCommunes] = useState<Commune[]>([])
+  const [prixCommunes, setPrixCommunes] = useState<Record<number, string>>({})
+  const [savingLivraison, setSavingLivraison] = useState(false)
+  const [messageLivraison, setMessageLivraison] = useState<string | null>(null)
+
+  const gereTarifs = user?.email !== EMAIL_TARIFS_FIXES
+
+  const nomAffiche = shopName || username || 'B'
+
   useEffect(() => {
     if (profile) {
       setUsername(profile.username ?? '')
@@ -27,31 +40,41 @@ export default function Parametres() {
       setAdresse(profile.adresse ?? '')
       setVille(profile.ville ?? '')
       setAvatarUrl(profile.avatar_url ?? '')
+      setPrixDefaut(profile.livraison_prix_defaut != null ? String(profile.livraison_prix_defaut) : '')
     }
   }, [profile])
 
-  const nomAffiche = shopName || username || 'B'
+  useEffect(() => {
+    if (!gereTarifs || !user) return
+
+    supabase.from('communes').select('id, nom, zone').order('zone').order('nom')
+      .then(({ data }) => setCommunes((data as Commune[]) || []))
+
+    supabase.from('tarifs_livraison_vendeur').select('commune_id, prix').eq('vendeur_id', user.id)
+      .then(({ data }) => {
+        const map: Record<number, string> = {}
+        ;(data || []).forEach((t: { commune_id: number; prix: number }) => {
+          map[t.commune_id] = String(t.prix)
+        })
+        setPrixCommunes(map)
+      })
+  }, [gereTarifs, user])
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !user) return
-
     setUploadingAvatar(true)
     setMessage(null)
-
     const ext = file.name.split('.').pop()
     const fileName = `${user.id}/avatar-${Date.now()}.${ext}`
     const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, file, { upsert: true })
-
     if (uploadError) {
       setUploadingAvatar(false)
       setMessage('Erreur upload : ' + uploadError.message)
       return
     }
-
     const { data } = supabase.storage.from('avatars').getPublicUrl(fileName)
     const newUrl = data.publicUrl
-
     await supabase.from('profiles').update({ avatar_url: newUrl }).eq('id', user.id)
     setAvatarUrl(newUrl)
     await refreshProfile()
@@ -79,13 +102,52 @@ export default function Parametres() {
       })
       .eq('id', user.id)
     setSaving(false)
-    if (error) {
-      setMessage('Erreur : ' + error.message)
-    } else {
+    if (error) setMessage('Erreur : ' + error.message)
+    else {
       await refreshProfile()
       setMessage('Modifications enregistrées.')
     }
   }
+
+  const handleSaveLivraison = async () => {
+    if (!user) return
+    setSavingLivraison(true)
+    setMessageLivraison(null)
+
+    await supabase
+      .from('profiles')
+      .update({ livraison_prix_defaut: Number(prixDefaut) || 0 })
+      .eq('id', user.id)
+
+    const lignes = Object.entries(prixCommunes)
+      .filter(([, prix]) => prix !== '' && !isNaN(Number(prix)))
+      .map(([communeId, prix]) => ({
+        vendeur_id: user.id,
+        commune_id: Number(communeId),
+        prix: Number(prix),
+      }))
+
+    if (lignes.length > 0) {
+      const { error } = await supabase
+        .from('tarifs_livraison_vendeur')
+        .upsert(lignes, { onConflict: 'vendeur_id,commune_id' })
+      if (error) {
+        setSavingLivraison(false)
+        setMessageLivraison('Erreur : ' + error.message)
+        return
+      }
+    }
+
+    await refreshProfile()
+    setSavingLivraison(false)
+    setMessageLivraison('Tarifs de livraison enregistrés.')
+  }
+
+  const communesParZone = communes.reduce((acc, c) => {
+    if (!acc[c.zone]) acc[c.zone] = []
+    acc[c.zone].push(c)
+    return acc
+  }, {} as Record<string, Commune[]>)
 
   return (
     <CompteLayout>
@@ -102,11 +164,7 @@ export default function Parametres() {
         <div className="flex items-center gap-4">
           <div className="relative">
             <div className="w-20 h-20 rounded-full overflow-hidden bg-sky-brand text-white flex items-center justify-center font-bold text-2xl uppercase">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                nomAffiche.charAt(0)
-              )}
+              {avatarUrl ? <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" /> : nomAffiche.charAt(0)}
             </div>
             <label className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-50 shadow-sm">
               <Camera className="w-4 h-4 text-slate-600" />
@@ -169,6 +227,57 @@ export default function Parametres() {
         <button onClick={handleSave} disabled={saving} className="bg-sky-brand hover:bg-sky-brand-dark text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-60">
           {saving ? 'Enregistrement...' : 'Enregistrer'}
         </button>
+
+        {/* Livraison — seulement pour les autres vendeurs */}
+        {gereTarifs && (
+          <div className="border-t border-slate-100 pt-8">
+            <h2 className="font-display font-bold text-sm uppercase tracking-wide text-slate-500 mb-1 flex items-center gap-2">
+              <Truck className="w-4 h-4" /> Tarifs de livraison
+            </h2>
+            <p className="text-xs text-slate-400 mb-4">
+              Définissez un prix par défaut, puis ajustez commune par commune si besoin.
+              Les communes sans prix spécifique utiliseront le prix par défaut.
+            </p>
+
+            {messageLivraison && (
+              <div className="mb-4 text-sm text-sky-brand bg-brand-50 border border-brand-100 rounded-lg px-3 py-2">
+                {messageLivraison}
+              </div>
+            )}
+
+            <div className="mb-6 max-w-xs">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Prix par défaut (F)</label>
+              <input type="number" value={prixDefaut} onChange={(e) => setPrixDefaut(e.target.value)} placeholder="Ex: 2000" className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand" />
+            </div>
+
+            <div className="space-y-5">
+              {Object.entries(communesParZone).map(([zone, list]) => (
+                <div key={zone}>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">{zone}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {list.map((c) => (
+                      <div key={c.id} className="flex items-center gap-2">
+                        <span className="text-sm text-slate-600 flex-1 truncate">{c.nom}</span>
+                        <input
+                          type="number"
+                          value={prixCommunes[c.id] ?? ''}
+                          onChange={(e) => setPrixCommunes({ ...prixCommunes, [c.id]: e.target.value })}
+                          placeholder={prixDefaut ? `${prixDefaut}` : 'défaut'}
+                          className="w-24 h-10 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand"
+                        />
+                        <span className="text-xs text-slate-400">F</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={handleSaveLivraison} disabled={savingLivraison} className="mt-6 bg-sky-brand hover:bg-sky-brand-dark text-white font-semibold px-6 py-2.5 rounded-lg text-sm transition-colors disabled:opacity-60">
+              {savingLivraison ? 'Enregistrement...' : 'Enregistrer les tarifs'}
+            </button>
+          </div>
+        )}
       </div>
     </CompteLayout>
   )

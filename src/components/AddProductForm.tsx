@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, Upload, Trash2, Plus } from 'lucide-react'
 import { supabase } from '../lib/supabaseClient'
 import type { Product } from '../data/products'
@@ -25,6 +25,9 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
   const [paymentMode, setPaymentMode] = useState(product?.payment_mode ?? 'cash')
   const [description, setDescription] = useState(product?.description ?? '')
   const [stock, setStock] = useState(product ? String(product.stock ?? 0) : '')
+  const [tags, setTags] = useState<string[]>(product?.tags ?? [])
+
+  const [sousCategories, setSousCategories] = useState<string[]>([])
 
   const [existingImages, setExistingImages] = useState<string[]>(
     product?.images && product.images.length > 0
@@ -37,6 +40,20 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Charge les sous-catégories de la catégorie sélectionnée
+  useEffect(() => {
+    supabase
+      .from('sous_categories')
+      .select('nom')
+      .eq('categorie', category)
+      .order('nom')
+      .then(({ data }) => setSousCategories((data || []).map((s: { nom: string }) => s.nom)))
+  }, [category])
+
+  const toggleTag = (tag: string) => {
+    setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))
+  }
 
   const addUrl = () => {
     if (urlInput.trim()) {
@@ -82,8 +99,6 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
     }
 
     const allImages = [...existingImages, ...uploadedUrls, ...urls]
-
-    // Le mode Wave n'est retenu que pour le compte autorisé
     const modeFinal = peutProposerWave ? paymentMode : 'cash'
 
     const payload: Record<string, unknown> = {
@@ -92,6 +107,7 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
       category,
       condition,
       payment_mode: modeFinal,
+      tags,
       description: description || null,
       stock: Number(stock) || 0,
       images: allImages,
@@ -160,7 +176,7 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Catégorie</label>
-              <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand">
+              <select value={category} onChange={(e) => { setCategory(e.target.value); setTags([]) }} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand">
                 <option>Smartphones</option>
                 <option>Ordinateurs</option>
                 <option>Audio</option>
@@ -179,7 +195,31 @@ export default function AddProductForm({ seller, onClose, onAdded, product }: Pr
             </div>
           </div>
 
-          {/* Mode de paiement : réservé au compte autorisé */}
+          {/* Sous-catégories / tags */}
+          {sousCategories.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Sous-catégories <span className="text-slate-400 font-normal">(sélectionnez ce qui correspond)</span>
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {sousCategories.map((sc) => (
+                  <button
+                    key={sc}
+                    type="button"
+                    onClick={() => toggleTag(sc)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      tags.includes(sc)
+                        ? 'bg-sky-brand text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {sc}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {peutProposerWave && (
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Mode de paiement</label>

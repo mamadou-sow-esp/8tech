@@ -8,7 +8,8 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabaseClient'
 import { emailNouvelleCommande } from '../lib/sendEmail'
 
-type Zone = { id: number; quartier: string; zone: string; prix: number }
+
+type Commune = { id: number; nom: string; zone: string }
 
 export default function Checkout() {
   const { items, totalPrice, clear } = useCart()
@@ -18,27 +19,83 @@ export default function Checkout() {
   const [nom, setNom] = useState('')
   const [telephone, setTelephone] = useState('')
   const [adresse, setAdresse] = useState('')
-  const [quartierId, setQuartierId] = useState('')
-  const [zones, setZones] = useState<Zone[]>([])
+  const [communeId, setCommuneId] = useState('')
+  const [communes, setCommunes] = useState<Commune[]>([])
+  const [fraisLivraison, setFraisLivraison] = useState(0)
+  const [calculFrais, setCalculFrais] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Charge les quartiers depuis Supabase
+  // L'email du vendeur principal du panier (pour savoir quelle grille de tarifs utiliser)
+  const sellerIdPrincipal = items[0]?.owner_id ?? null
+
+  // Charge les communes
   useEffect(() => {
-    supabase
-      .from('zones_livraison')
-      .select('id, quartier, zone, prix')
-      .eq('actif', true)
-      .order('zone')
-      .order('quartier')
-      .then(({ data }) => setZones((data as Zone[]) || []))
+    supabase.from('communes').select('id, nom, zone').order('zone').order('nom')
+      .then(({ data }) => setCommunes((data as Commune[]) || []))
   }, [])
 
-  const zoneChoisie = zones.find((z) => z.id === Number(quartierId))
-  const fraisLivraison = zoneChoisie?.prix ?? 0
-  const totalAvecLivraison = totalPrice + fraisLivraison
+  // Recalcule les frais de livraison quand la commune change
+  useEffect(() => {
+    const calcul = async () => {
+      if (!communeId || !sellerIdPrincipal) {
+        setFraisLivraison(0)
+        return
+      }
+      setCalculFrais(true)
 
-  const formValide = nom.trim() && telephone.trim() && adresse.trim() && quartierId
+      const communeChoisie = communes.find((c) => c.id === Number(communeId))
+
+      // Récupère l'email du vendeur principal
+      const { data: vendeurProfile } = await supabase
+        .from('profiles')
+        .select('livraison_prix_defaut')
+        .eq('id', sellerIdPrincipal)
+        .single()
+
+      // On identifie si le vendeur principal est le compte à tarifs fixes
+      // via une requête sur auth n'étant pas possible côté client,
+      // on se base sur zones_livraison : si le vendeur a des tarifs perso, on les prend.
+      // 1. Cherche un tarif spécifique commune pour ce vendeur
+      const { data: tarifPerso } = await supabase
+        .from('tarifs_livraison_vendeur')
+        .select('prix')
+        .eq('vendeur_id', sellerIdPrincipal)
+        .eq('commune_id', Number(communeId))
+        .maybeSingle()
+
+      if (tarifPerso) {
+        setFraisLivraison(tarifPerso.prix)
+        setCalculFrais(false)
+        return
+      }
+
+      // 2. Sinon, tarif par défaut du vendeur (si défini > 0)
+      if (vendeurProfile?.livraison_prix_defaut && vendeurProfile.livraison_prix_defaut > 0) {
+        setFraisLivraison(vendeurProfile.livraison_prix_defaut)
+        setCalculFrais(false)
+        return
+      }
+
+      // 3. Sinon (cas du compte à tarifs fixes / sowmomo689), on utilise zones_livraison par nom de commune
+      if (communeChoisie) {
+        const { data: zone } = await supabase
+          .from('zones_livraison')
+          .select('prix')
+          .eq('quartier', communeChoisie.nom)
+          .maybeSingle()
+        setFraisLivraison(zone?.prix ?? 0)
+      } else {
+        setFraisLivraison(0)
+      }
+      setCalculFrais(false)
+    }
+    calcul()
+  }, [communeId, sellerIdPrincipal, communes])
+
+  const communeChoisie = communes.find((c) => c.id === Number(communeId))
+  const totalAvecLivraison = totalPrice + fraisLivraison
+  const formValide = nom.trim() && telephone.trim() && adresse.trim() && communeId
 
   const handleOrder = async () => {
     if (!user) {
@@ -46,13 +103,12 @@ export default function Checkout() {
       return
     }
     if (!formValide) {
-      setError('Merci de remplir tous les champs, y compris le quartier de livraison.')
+      setError('Merci de remplir tous les champs, y compris la commune de livraison.')
       return
     }
     setLoading(true)
     setError(null)
 
-    // Vérif stock
     const ids = items.map((i) => i.id)
     const { data: stockData, error: stockErr } = await supabase
       .from('products')
@@ -75,9 +131,8 @@ export default function Checkout() {
       }
     }
 
-    const quartierNom = zoneChoisie?.quartier ?? ''
+    const communeNom = communeChoisie?.nom ?? ''
 
-    // Regroupe par vendeur
     const parVendeur: Record<string, typeof items> = {}
     for (const item of items) {
       const key = item.owner_id ?? 'inconnu'
@@ -94,9 +149,9 @@ export default function Checkout() {
       const sousTotal = vendeurItems.reduce((sum, i) => sum + i.price * i.qty, 0)
       const vendeurWave = vendeurItems.some((i) => i.payment_mode === 'wave')
 
-      // Frais de livraison : on les met sur la 1re commande seulement (une seule livraison)
-      const estPremierVendeur = sellerId === vendeurIds[0]
-      const fraisPourCetteCommande = estPremierVendeur ? fraisLivraison : 0
+      // Les frais ne s'appliquent qu'au vendeur principal (une seule livraison facturée)
+      const estPrincipal = sellerId === vendeurIds[0]
+      const fraisPourCetteCommande = estPrincipal ? fraisLivraison : 0
       const totalCommande = sousTotal + fraisPourCetteCommande
 
       const { data: orderData, error } = await supabase
@@ -109,8 +164,8 @@ export default function Checkout() {
           nom,
           telephone,
           adresse,
-          ville: quartierNom,
-          quartier: quartierNom,
+          ville: communeNom,
+          quartier: communeNom,
           frais_livraison: fraisPourCetteCommande,
           status: vendeurWave ? 'en_attente_paiement' : 'en attente',
           payment_status: vendeurWave ? 'pending' : 'non_requis',
@@ -139,7 +194,6 @@ export default function Checkout() {
       }
     }
 
-    // Paiement Wave
     if (contientWave && orderPourPaiement) {
       const { data, error: payErr } = await supabase.functions.invoke('create-payment', {
         body: { orderId: orderPourPaiement, amount: totalWavePourPaiement, customerPhone: telephone },
@@ -176,12 +230,11 @@ export default function Checkout() {
 
   const contientWave = items.some((i) => i.payment_mode === 'wave')
 
-  // Groupe les quartiers par zone pour l'affichage
-  const zonesParGroupe = zones.reduce((acc, z) => {
-    if (!acc[z.zone]) acc[z.zone] = []
-    acc[z.zone].push(z)
+  const communesParZone = communes.reduce((acc, c) => {
+    if (!acc[c.zone]) acc[c.zone] = []
+    acc[c.zone].push(c)
     return acc
-  }, {} as Record<string, Zone[]>)
+  }, {} as Record<string, Commune[]>)
 
   return (
     <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
@@ -209,16 +262,14 @@ export default function Checkout() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">
-                Quartier de livraison <span className="text-red-500">*</span>
+                Commune de livraison <span className="text-red-500">*</span>
               </label>
-              <select value={quartierId} onChange={(e) => setQuartierId(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand">
-                <option value="">-- Choisissez votre quartier --</option>
-                {Object.entries(zonesParGroupe).map(([zone, quartiers]) => (
+              <select value={communeId} onChange={(e) => setCommuneId(e.target.value)} className="w-full h-11 px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-brand">
+                <option value="">-- Choisissez votre commune --</option>
+                {Object.entries(communesParZone).map(([zone, list]) => (
                   <optgroup key={zone} label={zone}>
-                    {quartiers.map((z) => (
-                      <option key={z.id} value={z.id}>
-                        {z.quartier} — {formatPrice(z.prix)}
-                      </option>
+                    {list.map((c) => (
+                      <option key={c.id} value={c.id}>{c.nom}</option>
                     ))}
                   </optgroup>
                 ))}
@@ -259,8 +310,8 @@ export default function Checkout() {
               <span>{formatPrice(totalPrice)}</span>
             </div>
             <div className="flex justify-between text-slate-600">
-              <span>Livraison{zoneChoisie ? ` (${zoneChoisie.quartier})` : ''}</span>
-              <span>{quartierId ? formatPrice(fraisLivraison) : '—'}</span>
+              <span>Livraison{communeChoisie ? ` (${communeChoisie.nom})` : ''}</span>
+              <span>{calculFrais ? '...' : communeId ? formatPrice(fraisLivraison) : '—'}</span>
             </div>
           </div>
 
@@ -271,7 +322,7 @@ export default function Checkout() {
 
           <button
             onClick={handleOrder}
-            disabled={loading || !formValide}
+            disabled={loading || !formValide || calculFrais}
             className="w-full mt-6 bg-sky-brand hover:bg-sky-brand-dark text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Traitement...' : contientWave ? 'Payer avec Wave' : 'Confirmer la commande'}
